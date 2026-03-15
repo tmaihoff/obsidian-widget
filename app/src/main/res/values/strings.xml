@@ -15,7 +15,6 @@
     <string name="save_widget">Save Widget</string>
     <string name="note_saved">Note saved!</string>
     <string name="error_saving">Error saving note</string>
-    <string name="daily_note_creating">Daily note not found — opening Obsidian to create it with your template. Capture again after.</string>
     <string name="setup_instructions">Add the Obsidian Widget to your home screen to see daily notes and quickly capture ideas.</string>
     <string name="select_vault_folder">Select Vault Folder</string>
     <string name="daily_notes_folder">Daily Notes Folder (optional)</string>

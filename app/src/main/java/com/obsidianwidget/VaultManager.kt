@@ -117,33 +117,36 @@ class VaultManager(private val context: Context) {
         return readFileContent(noteFile.uri)
     }
 
-    enum class AppendResult { SUCCESS, NOTE_NOT_FOUND, ERROR }
-
     /**
-     * Append text to today's daily note. Does NOT create the file —
-     * if the daily note doesn't exist, returns NOTE_NOT_FOUND so the caller
-     * can trigger Obsidian to create it with the proper template.
+     * Append text to today's daily note (creates the file if it doesn't exist).
      */
-    fun appendToDailyNote(text: String): AppendResult {
-        val uri = vaultUri ?: return AppendResult.ERROR
-        val rootDoc = DocumentFile.fromTreeUri(context, uri) ?: return AppendResult.ERROR
+    fun appendToDailyNote(text: String): Boolean {
+        val uri = vaultUri ?: return false
+        val rootDoc = DocumentFile.fromTreeUri(context, uri) ?: return false
 
         val todayFileName = getTodayFileName()
         val targetDir = if (dailyFolder.isNotBlank()) {
-            findSubDirectory(rootDoc, dailyFolder)
+            findOrCreateSubDirectory(rootDoc, dailyFolder)
         } else {
             rootDoc
-        } ?: return AppendResult.NOTE_NOT_FOUND
+        } ?: return false
 
-        val noteFile = targetDir.findFile(todayFileName) ?: return AppendResult.NOTE_NOT_FOUND
+        val noteFile = targetDir.findFile(todayFileName)
 
-        val existing = readFileContent(noteFile.uri) ?: ""
-        val newContent = if (existing.isNotBlank()) {
-            "$existing\n\n$text"
+        return if (noteFile != null) {
+            // Append to existing file
+            val existing = readFileContent(noteFile.uri) ?: ""
+            val newContent = if (existing.isNotBlank()) {
+                "$existing\n\n$text"
+            } else {
+                text
+            }
+            writeFileContent(noteFile.uri, newContent)
         } else {
-            text
+            // Create new file — just the captured text, no header
+            val newFile = targetDir.createFile("text/markdown", todayFileName) ?: return false
+            writeFileContent(newFile.uri, text)
         }
-        return if (writeFileContent(noteFile.uri, newContent)) AppendResult.SUCCESS else AppendResult.ERROR
     }
 
     private fun getTodayFileName(): String {
