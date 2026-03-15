@@ -1,80 +1,87 @@
 # Obsidian Widget for Android
 
-A simple Android home screen widget for [Obsidian](https://obsidian.md) that lets you:
+A feature-rich Android home screen widget for [Obsidian](https://obsidian.md). View your notes, check off tasks, and capture ideas — all without opening the app.
 
-- 📝 **View your daily note** right on the home screen
-- ✏️ **Quick capture** thoughts and ideas into your daily note
-- 📂 **Open Obsidian** with one tap
-- 🔄 **Auto-refresh** every 30 minutes
+## Install
 
-## Screenshots
+### Option 1: Download the APK (easiest)
 
-The widget displays your daily note content with a dark Obsidian-themed UI.
+1. Go to the [Releases](../../releases) page
+2. Download the latest `.apk` file
+3. On your Android device, open the APK and tap **Install**
+   - You may need to enable "Install from unknown sources" in Settings
 
-## Features
+### Option 2: Build from source
 
-| Feature | Description |
-|---------|-------------|
-| Daily Note Preview | Shows today's note content on the widget |
-| Quick Capture | Pop-up dialog to append text to today's note |
-| Open Obsidian | One-tap launch of the Obsidian app |
-| Vault Selection | Pick your vault folder via system file picker |
-| Custom Date Format | Configure `yyyy-MM-dd` or any Java date pattern |
-| Daily Notes Subfolder | Specify a subfolder like `Daily Notes` |
+```bash
+git clone https://github.com/YOUR_USERNAME/obsidian-widget.git
+cd obsidian-widget
+./gradlew assembleRelease
+# APK will be at app/build/outputs/apk/release/app-release-unsigned.apk
+```
+
+Or open in Android Studio and click **Run**.
 
 ## Setup
 
-### Prerequisites
-- Android Studio (Hedgehog or later)
-- Android SDK 34
-- JDK 17
-- An Obsidian vault synced to your Android device
+1. Open the **Obsidian Widget** app and select your vault folder
+2. Long-press your home screen → **Widgets** → drag **Obsidian Widget**
+3. Tap the **⚙** gear icon on the widget to configure it
 
-### Build & Install
+## Features
 
-1. Open this project in Android Studio
-2. Connect your Android device or start an emulator
-3. Click **Run** (or `./gradlew installDebug`)
+- **Daily note or pinned notes** — show today's daily note or pick specific files
+- **Multiple notes per widget** — swipe between notes with navigation arrows
+- **Interactive checkboxes** — tap to toggle `- [ ]` / `- [x]` directly from the widget
+- **Quick capture** — pop-up dialog to append text to your note
+- **Append with +** — one-tap add, auto-formats as checkbox if the note uses them
+- **Markdown rendering** — bold, italic, headings, and bullet lists
+- **Sort unchecked first** — push completed tasks to the bottom
+- **Widget transparency** — adjustable opacity to blend with your wallpaper
+- **Auto-refresh** — updates every 30 minutes and on screen unlock
+- **Deep link to Obsidian** — tap the title to open the note in Obsidian
+- **Per-widget settings** — each widget has independent configuration
+- **Dark theme** — Obsidian-inspired dark UI
 
-### Configure
+## Widget Configuration
 
-1. Open the **Obsidian Widget** app
-2. Tap **Select** to choose your Obsidian vault folder
-3. (Optional) Set a daily notes subfolder (e.g., `Daily Notes`)
-4. (Optional) Change the date format
-5. Long-press your home screen → **Widgets** → drag **Obsidian Widget**
+All settings are per-widget. Tap the ⚙ icon on any widget to access:
 
-## How It Works
+| Setting | Description |
+|---------|-------------|
+| Vault | Select your Obsidian vault folder |
+| Note Mode | Daily note or specific note(s) |
+| Notes | Add/remove multiple pinned notes |
+| Daily Subfolder | e.g. `Daily Notes` |
+| Date Format | Any Java date pattern (`yyyy-MM-dd`, `dd-MM-yyyy`, etc.) |
+| Show Buttons | Toggle the capture/add button bar |
+| Sort Unchecked | Move incomplete tasks to the top |
+| Widget Opacity | 0–100% transparency slider |
 
-- Uses Android's **Storage Access Framework (SAF)** to read/write markdown files
-- Persistable URI permissions keep access across reboots
-- The widget updates via `AppWidgetProvider` every 30 minutes
-- Quick Capture appends text to today's daily note (creates it if needed)
+## Requirements
+
+- Android 8.0+ (API 26)
+- Obsidian vault accessible on device (local or synced)
+- No root or special permissions needed — uses Android's Storage Access Framework
 
 ## Project Structure
 
 ```
-app/src/main/
-├── java/com/obsidianwidget/
-│   ├── MainActivity.kt           # Main settings screen
-│   ├── ObsidianWidgetProvider.kt  # Widget logic & updates
-│   ├── QuickCaptureActivity.kt    # Quick capture dialog
-│   ├── VaultManager.kt           # Vault read/write operations
-│   └── WidgetConfigActivity.kt    # Widget configuration
-├── res/
-│   ├── layout/                    # UI layouts
-│   ├── drawable/                  # Backgrounds & icons
-│   ├── values/                    # Colors, strings, themes
-│   └── xml/widget_info.xml        # Widget metadata
-└── AndroidManifest.xml
+app/src/main/java/com/obsidianwidget/
+├── MainActivity.kt              # Welcome screen & vault selection
+├── WidgetConfigActivity.kt      # Per-widget settings (gear icon)
+├── ObsidianWidgetProvider.kt    # Widget rendering & action handling
+├── ChecklistWidgetService.kt    # ListView adapter (checkboxes, text, headings)
+├── QuickCaptureActivity.kt      # Quick capture dialog
+└── VaultManager.kt              # Vault I/O, preferences, markdown parsing
 ```
 
 ## Tech Stack
 
-- **Kotlin** — primary language
-- **AndroidX** — AppCompat, DocumentFile, Preferences
-- **Material 3** — theming
-- **SAF** — secure vault file access (no broad storage permissions needed)
+- **Kotlin** + **AndroidX**
+- **Storage Access Framework** — secure file access, no broad storage permissions
+- **AppWidgetProvider** + **RemoteViewsService** — native widget framework
+- **SharedPreferences** — per-widget settings with `_widgetId` key suffixing
 
 ## License
 
