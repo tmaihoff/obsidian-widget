@@ -2,6 +2,8 @@ package com.obsidianwidget
 
 import android.appwidget.AppWidgetManager
 import android.content.Intent
+import android.graphics.Color
+import android.graphics.drawable.GradientDrawable
 import android.net.Uri
 import android.os.Bundle
 import android.view.View
@@ -32,6 +34,12 @@ class WidgetConfigActivity : AppCompatActivity() {
     private lateinit var tapCheckboxOnlyToggle: Switch
     private lateinit var showAddToTopToggle: Switch
     private lateinit var dateFormatInput: EditText
+    private lateinit var themeGroup: RadioGroup
+    private var selectedAccentColor: String = "#D97757"
+    private val colorSwatchIds = listOf(
+        R.id.color_terracotta, R.id.color_purple, R.id.color_blue, R.id.color_green,
+        R.id.color_red, R.id.color_teal, R.id.color_pink, R.id.color_amber
+    )
 
     private val folderPicker = registerForActivityResult(
         ActivityResultContracts.OpenDocumentTree()
@@ -78,6 +86,10 @@ class WidgetConfigActivity : AppCompatActivity() {
         tapCheckboxOnlyToggle = findViewById(R.id.config_tap_checkbox_only)
         showAddToTopToggle = findViewById(R.id.config_show_add_to_top)
         dateFormatInput = findViewById(R.id.config_date_format)
+        themeGroup = findViewById(R.id.config_theme_group)
+
+        // Set up accent color swatches
+        setupColorSwatches()
 
         // Load saved settings into UI
         loadSettings()
@@ -142,6 +154,13 @@ class WidgetConfigActivity : AppCompatActivity() {
 
         transparencySeekBar.progress = vaultManager.widgetAlpha
         transparencyLabel.text = "${vaultManager.widgetAlpha}%"
+
+        // Theme
+        themeGroup.check(if (vaultManager.widgetTheme == "light") R.id.config_theme_light else R.id.config_theme_dark)
+
+        // Accent color
+        selectedAccentColor = vaultManager.accentColor
+        highlightSelectedColor()
     }
 
     private fun updateModeSections(isPinned: Boolean) {
@@ -210,6 +229,42 @@ class WidgetConfigActivity : AppCompatActivity() {
         }
     }
 
+    private fun setupColorSwatches() {
+        for (id in colorSwatchIds) {
+            val swatch = findViewById<View>(id)
+            val colorHex = swatch.tag as String
+            val color = Color.parseColor(colorHex)
+            val bg = GradientDrawable().apply {
+                shape = GradientDrawable.OVAL
+                setColor(color)
+            }
+            swatch.background = bg
+            swatch.setOnClickListener {
+                selectedAccentColor = colorHex
+                highlightSelectedColor()
+            }
+        }
+    }
+
+    private fun highlightSelectedColor() {
+        for (id in colorSwatchIds) {
+            val swatch = findViewById<View>(id)
+            val colorHex = swatch.tag as String
+            val color = Color.parseColor(colorHex)
+            val isSelected = colorHex.equals(selectedAccentColor, ignoreCase = true)
+            val bg = GradientDrawable().apply {
+                shape = GradientDrawable.OVAL
+                setColor(color)
+                if (isSelected) {
+                    setStroke(4, Color.WHITE)
+                } else {
+                    setStroke(0, Color.TRANSPARENT)
+                }
+            }
+            swatch.background = bg
+        }
+    }
+
     private fun saveAndFinish() {
         // Use batch commit for reliable persistence
         vaultManager.saveWidgetSettings(
@@ -222,7 +277,9 @@ class WidgetConfigActivity : AppCompatActivity() {
             widgetAlpha = transparencySeekBar.progress,
             tapCheckboxOnly = tapCheckboxOnlyToggle.isChecked,
             addToTop = vaultManager.addToTop,
-            showAddToTop = showAddToTopToggle.isChecked
+            showAddToTop = showAddToTopToggle.isChecked,
+            widgetTheme = if (themeGroup.checkedRadioButtonId == R.id.config_theme_light) "light" else "dark",
+            accentColor = selectedAccentColor
         )
 
         // Trigger update for this specific widget

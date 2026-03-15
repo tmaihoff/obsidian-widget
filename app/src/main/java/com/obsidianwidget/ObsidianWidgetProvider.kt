@@ -6,7 +6,9 @@ import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.res.ColorStateList
 import android.net.Uri
+import android.os.Build
 import android.view.View
 import android.widget.RemoteViews
 
@@ -217,6 +219,21 @@ class ObsidianWidgetProvider : AppWidgetProvider() {
 
         // Apply widget transparency
         views.setFloat(R.id.widget_root, "setAlpha", vaultManager.widgetAlpha / 100f)
+
+        // Apply theme colors
+        val colors = vaultManager.getThemeColors()
+        val isDark = vaultManager.widgetTheme == "dark"
+        views.setInt(R.id.widget_root, "setBackgroundResource",
+            if (isDark) R.drawable.widget_background else R.drawable.widget_background_light)
+        views.setTextColor(R.id.widget_date, colors.text)
+        views.setTextColor(R.id.widget_note_preview, colors.textSecondary)
+
+        // Tint accent-colored buttons (preserves rounded drawable shape)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val accentTint = ColorStateList.valueOf(colors.accent)
+            views.setColorStateList(R.id.widget_btn_capture, "setBackgroundTintList", accentTint)
+            views.setColorStateList(R.id.widget_add, "setBackgroundTintList", accentTint)
+        }
 
         // Show/hide navigation arrows for multi-note
         val noteCount = if (vaultManager.noteMode == VaultManager.NoteMode.PINNED) vaultManager.getPinnedNoteCount() else 0

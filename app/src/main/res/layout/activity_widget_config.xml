@@ -295,6 +295,120 @@
                 android:trackTint="@color/obsidian_text_secondary" />
         </LinearLayout>
 
+        <!-- Theme -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Theme"
+            android:textColor="@color/obsidian_text_secondary"
+            android:textSize="13sp"
+            android:fontFamily="sans-serif-medium"
+            android:layout_marginBottom="8dp" />
+
+        <RadioGroup
+            android:id="@+id/config_theme_group"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/input_background"
+            android:orientation="horizontal"
+            android:padding="14dp"
+            android:layout_marginBottom="20dp">
+
+            <RadioButton
+                android:id="@+id/config_theme_dark"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Dark"
+                android:textColor="@color/obsidian_text"
+                android:buttonTint="@color/obsidian_primary" />
+
+            <RadioButton
+                android:id="@+id/config_theme_light"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Light"
+                android:textColor="@color/obsidian_text"
+                android:buttonTint="@color/obsidian_primary" />
+        </RadioGroup>
+
+        <!-- Accent Color -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Accent Color"
+            android:textColor="@color/obsidian_text_secondary"
+            android:textSize="13sp"
+            android:fontFamily="sans-serif-medium"
+            android:layout_marginBottom="8dp" />
+
+        <LinearLayout
+            android:id="@+id/config_accent_color_row"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/input_background"
+            android:orientation="horizontal"
+            android:padding="14dp"
+            android:gravity="center"
+            android:layout_marginBottom="20dp">
+
+            <View
+                android:id="@+id/color_terracotta"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:layout_marginEnd="10dp"
+                android:tag="#D97757" />
+
+            <View
+                android:id="@+id/color_purple"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:layout_marginEnd="10dp"
+                android:tag="#7C5FC7" />
+
+            <View
+                android:id="@+id/color_blue"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:layout_marginEnd="10dp"
+                android:tag="#4A9EF5" />
+
+            <View
+                android:id="@+id/color_green"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:layout_marginEnd="10dp"
+                android:tag="#4CAF50" />
+
+            <View
+                android:id="@+id/color_red"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:layout_marginEnd="10dp"
+                android:tag="#E53935" />
+
+            <View
+                android:id="@+id/color_teal"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:layout_marginEnd="10dp"
+                android:tag="#009688" />
+
+            <View
+                android:id="@+id/color_pink"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:layout_marginEnd="10dp"
+                android:tag="#E91E63" />
+
+            <View
+                android:id="@+id/color_amber"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:tag="#FFB300" />
+        </LinearLayout>
+
         <!-- Widget Transparency -->
         <TextView
             android:layout_width="wrap_content"

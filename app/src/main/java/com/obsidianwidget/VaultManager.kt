@@ -46,6 +46,8 @@ class VaultManager(private val context: Context, private val widgetId: Int = -1)
         private const val KEY_TAP_CHECKBOX_ONLY = "tap_checkbox_only"
         private const val KEY_ADD_TO_TOP = "add_to_top"
         private const val KEY_SHOW_ADD_TO_TOP = "show_add_to_top"
+        private const val KEY_WIDGET_THEME = "widget_theme"
+        private const val KEY_ACCENT_COLOR = "accent_color"
         private const val DEFAULT_DATE_FORMAT = "yyyy-MM-dd"
 
         private val CHECKLIST_REGEX = Regex("""^(\s*)-\s*\[([ xX])\]\s*(.*)$""")
@@ -69,6 +71,8 @@ class VaultManager(private val context: Context, private val widgetId: Int = -1)
                 .remove("${KEY_TAP_CHECKBOX_ONLY}_$widgetId")
                 .remove("${KEY_ADD_TO_TOP}_$widgetId")
                 .remove("${KEY_SHOW_ADD_TO_TOP}_$widgetId")
+                .remove("${KEY_WIDGET_THEME}_$widgetId")
+                .remove("${KEY_ACCENT_COLOR}_$widgetId")
                 .apply()
         }
     }
@@ -203,6 +207,44 @@ class VaultManager(private val context: Context, private val widgetId: Int = -1)
         get() = prefs.getBoolean(wk(KEY_SHOW_ADD_TO_TOP), true)
         set(value) = prefs.edit().putBoolean(wk(KEY_SHOW_ADD_TO_TOP), value).apply()
 
+    var widgetTheme: String
+        get() = prefs.getString(wk(KEY_WIDGET_THEME), "dark") ?: "dark"
+        set(value) = prefs.edit().putString(wk(KEY_WIDGET_THEME), value).apply()
+
+    var accentColor: String
+        get() = prefs.getString(wk(KEY_ACCENT_COLOR), "#D97757") ?: "#D97757"
+        set(value) = prefs.edit().putString(wk(KEY_ACCENT_COLOR), value).apply()
+
+    fun getThemeColors(): ThemeColors {
+        val isDark = widgetTheme == "dark"
+        val accent = try { android.graphics.Color.parseColor(accentColor) } catch (_: Exception) { 0xFFD97757.toInt() }
+        return if (isDark) {
+            ThemeColors(
+                bg = 0xF21A1A1E.toInt(),
+                text = 0xFFE8E6E3.toInt(),
+                textSecondary = 0xFF8B8B8F.toInt(),
+                accent = accent,
+                buttonText = 0xFFFFFFFF.toInt()
+            )
+        } else {
+            ThemeColors(
+                bg = 0xF2F5F5F5.toInt(),
+                text = 0xFF1A1A1E.toInt(),
+                textSecondary = 0xFF6B6B6F.toInt(),
+                accent = accent,
+                buttonText = 0xFFFFFFFF.toInt()
+            )
+        }
+    }
+
+    data class ThemeColors(
+        val bg: Int,
+        val text: Int,
+        val textSecondary: Int,
+        val accent: Int,
+        val buttonText: Int
+    )
+
     /**
      * Batch save all widget settings using commit() for reliable persistence.
      */
@@ -215,7 +257,9 @@ class VaultManager(private val context: Context, private val widgetId: Int = -1)
         widgetAlpha: Int,
         tapCheckboxOnly: Boolean,
         addToTop: Boolean,
-        showAddToTop: Boolean
+        showAddToTop: Boolean,
+        widgetTheme: String,
+        accentColor: String
     ) {
         prefs.edit()
             .putString(wk(KEY_DAILY_FOLDER), dailyFolder)
@@ -227,6 +271,8 @@ class VaultManager(private val context: Context, private val widgetId: Int = -1)
             .putBoolean(wk(KEY_TAP_CHECKBOX_ONLY), tapCheckboxOnly)
             .putBoolean(wk(KEY_ADD_TO_TOP), addToTop)
             .putBoolean(wk(KEY_SHOW_ADD_TO_TOP), showAddToTop)
+            .putString(wk(KEY_WIDGET_THEME), widgetTheme)
+            .putString(wk(KEY_ACCENT_COLOR), accentColor)
             .commit()
     }
 

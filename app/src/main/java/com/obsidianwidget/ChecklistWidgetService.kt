@@ -23,6 +23,13 @@ class ChecklistRemoteViewsFactory(
 
     private var items = listOf<VaultManager.ChecklistItem>()
     private var tapCheckboxOnly = false
+    private var themeColors = VaultManager.ThemeColors(
+        bg = 0xFF1A1A1E.toInt(),
+        text = 0xFFE8E6E3.toInt(),
+        textSecondary = 0xFF8B8B8F.toInt(),
+        accent = 0xFFD97757.toInt(),
+        buttonText = 0xFFFFFFFF.toInt()
+    )
 
     companion object {
         private val BOLD_ITALIC = Regex("""\*\*\*(.+?)\*\*\*""")
@@ -70,6 +77,7 @@ class ChecklistRemoteViewsFactory(
         val vaultManager = VaultManager(context, widgetId)
         items = vaultManager.parseChecklist()
         tapCheckboxOnly = vaultManager.tapCheckboxOnly
+        themeColors = vaultManager.getThemeColors()
     }
 
     override fun onDestroy() {
@@ -84,6 +92,7 @@ class ChecklistRemoteViewsFactory(
         if (item.isHeading) {
             val views = RemoteViews(context.packageName, R.layout.widget_heading_item)
             views.setTextViewText(R.id.heading_item_content, markdownToHtml(item.text))
+            views.setTextColor(R.id.heading_item_content, themeColors.text)
             val url = extractFirstUrl(item.text)
             if (url != null) {
                 views.setOnClickFillInIntent(R.id.heading_item_root, Intent().apply {
@@ -99,6 +108,7 @@ class ChecklistRemoteViewsFactory(
             val views = RemoteViews(context.packageName, R.layout.widget_text_item)
             val displayText = if (item.isBullet) "•  ${item.text}" else item.text
             views.setTextViewText(R.id.text_item_content, markdownToHtml(displayText))
+            views.setTextColor(R.id.text_item_content, themeColors.text)
             val url = extractFirstUrl(item.text)
             if (url != null) {
                 views.setOnClickFillInIntent(R.id.text_item_root, Intent().apply {
@@ -123,12 +133,10 @@ class ChecklistRemoteViewsFactory(
         if (item.isChecked) {
             views.setInt(R.id.checklist_text, "setPaintFlags",
                 Paint.STRIKE_THRU_TEXT_FLAG or Paint.ANTI_ALIAS_FLAG)
-            views.setTextColor(R.id.checklist_text,
-                context.getColor(R.color.obsidian_text_secondary))
+            views.setTextColor(R.id.checklist_text, themeColors.textSecondary)
         } else {
             views.setInt(R.id.checklist_text, "setPaintFlags", Paint.ANTI_ALIAS_FLAG)
-            views.setTextColor(R.id.checklist_text,
-                context.getColor(R.color.obsidian_text))
+            views.setTextColor(R.id.checklist_text, themeColors.text)
         }
 
         // Fill-in intent for toggling this item
