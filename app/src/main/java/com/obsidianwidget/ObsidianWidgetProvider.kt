@@ -256,6 +256,11 @@ class ObsidianWidgetProvider : AppWidgetProvider() {
         views.setTextColor(R.id.widget_note_preview, colors.textSecondary)
         views.setTextColor(R.id.widget_todo_count, colors.textSecondary)
 
+        // Tint header icons to match theme
+        views.setInt(R.id.widget_refresh, "setColorFilter", colors.text)
+        views.setInt(R.id.widget_settings, "setColorFilter", colors.text)
+        views.setInt(R.id.widget_cycle_note, "setColorFilter", colors.text)
+
         // Tint accent-colored buttons (preserves rounded drawable shape)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             val accentTint = ColorStateList.valueOf(colors.accent)
