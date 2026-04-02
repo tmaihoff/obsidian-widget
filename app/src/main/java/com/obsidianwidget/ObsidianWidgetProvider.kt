@@ -98,9 +98,8 @@ class ObsidianWidgetProvider : AppWidgetProvider() {
                 if (lineIndex >= 0 && widgetId >= 0) {
                     val vaultManager = VaultManager(context, widgetId)
                     vaultManager.toggleChecklistItem(lineIndex)
-                    // Only refresh the specific widget's list data
                     val appWidgetManager = AppWidgetManager.getInstance(context)
-                    appWidgetManager.notifyAppWidgetViewDataChanged(widgetId, R.id.widget_checklist)
+                    updateWidget(context, appWidgetManager, widgetId)
                 }
             }
             ACTION_NAV_LEFT, ACTION_NAV_RIGHT -> {
