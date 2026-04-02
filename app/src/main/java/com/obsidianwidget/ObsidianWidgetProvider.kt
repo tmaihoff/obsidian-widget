@@ -60,7 +60,7 @@ class ObsidianWidgetProvider : AppWidgetProvider() {
         super.onReceive(context, intent)
 
         when (intent.action) {
-            ACTION_REFRESH, Intent.ACTION_USER_PRESENT -> updateAllWidgets(context)
+            ACTION_REFRESH -> updateAllWidgets(context)
             ACTION_CAPTURE -> {
                 val widgetId = intent.getIntExtra(EXTRA_WIDGET_ID, -1)
                 val captureIntent = Intent(context, QuickCaptureActivity::class.java).apply {
