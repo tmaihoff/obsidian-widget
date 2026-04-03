@@ -14,14 +14,13 @@ import android.widget.RadioGroup
 import android.widget.SeekBar
 import android.widget.Switch
 import android.widget.TextView
-import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 
 class WidgetConfigActivity : AppCompatActivity() {
 
     private var appWidgetId = AppWidgetManager.INVALID_APPWIDGET_ID
-    private var finishedSaving = false
+    private var isPickerOpen = false
     private lateinit var vaultManager: VaultManager
     private lateinit var vaultPathText: TextView
     private lateinit var dailyFolderInput: EditText
@@ -47,12 +46,14 @@ class WidgetConfigActivity : AppCompatActivity() {
     private val folderPicker = registerForActivityResult(
         ActivityResultContracts.OpenDocumentTree()
     ) { uri: Uri? ->
+        isPickerOpen = false
         uri?.let { onVaultSelected(it) }
     }
 
     private val notePicker = registerForActivityResult(
         ActivityResultContracts.OpenDocument()
     ) { uri: Uri? ->
+        isPickerOpen = false
         uri?.let { onNoteSelected(it) }
     }
 
@@ -74,6 +75,11 @@ class WidgetConfigActivity : AppCompatActivity() {
             finish()
             return
         }
+
+        // Set result eagerly so ANY future finish() delivers success to the launcher
+        setResult(RESULT_OK, Intent().apply {
+            putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
+        })
 
         vaultManager = VaultManager(this, appWidgetId)
         vaultPathText = findViewById(R.id.config_vault_path)
@@ -107,10 +113,12 @@ class WidgetConfigActivity : AppCompatActivity() {
         })
 
         findViewById<Button>(R.id.config_select_vault).setOnClickListener {
+            isPickerOpen = true
             folderPicker.launch(null)
         }
 
         findViewById<Button>(R.id.config_add_note).setOnClickListener {
+            isPickerOpen = true
             notePicker.launch(arrayOf("text/*", "application/octet-stream"))
         }
 
@@ -118,11 +126,9 @@ class WidgetConfigActivity : AppCompatActivity() {
             updateModeSections(checkedId == R.id.config_radio_pinned)
         }
 
-        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
-            override fun handleOnBackPressed() {
-                saveAndFinish()
-            }
-        })
+        findViewById<Button>(R.id.config_save).setOnClickListener {
+            saveAndFinish()
+        }
     }
 
     override fun onNewIntent(intent: Intent?) {
@@ -274,13 +280,12 @@ class WidgetConfigActivity : AppCompatActivity() {
 
     override fun onUserLeaveHint() {
         super.onUserLeaveHint()
-        saveAndFinish()
+        if (!isPickerOpen) {
+            saveAndFinish()
+        }
     }
 
     private fun saveAndFinish() {
-        if (finishedSaving) return
-        finishedSaving = true
-        // Use batch commit for reliable persistence
         vaultManager.saveWidgetSettings(
             dailyFolder = dailyFolderInput.text.toString().trim(),
             dateFormat = dateFormatInput.text.toString().trim().ifBlank { "yyyy-MM-dd" },
@@ -305,11 +310,6 @@ class WidgetConfigActivity : AppCompatActivity() {
         // Also refresh all other widgets so they don't go stale
         ObsidianWidgetProvider.updateAllWidgets(this)
 
-        // Return success
-        val resultValue = Intent().apply {
-            putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
-        }
-        setResult(RESULT_OK, resultValue)
         finish()
     }
 }
