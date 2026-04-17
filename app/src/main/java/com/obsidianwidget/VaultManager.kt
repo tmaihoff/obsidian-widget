@@ -59,6 +59,8 @@ class VaultManager(private val context: Context, private val widgetId: Int = -1)
         private const val KEY_WIDGET_STYLE = "widget_style"
         private const val KEY_SHOW_HEADER = "show_header"
         private const val DEFAULT_DATE_FORMAT = "yyyy-MM-dd"
+        /** Separator between note title and note path in folder mode headings. */
+        private const val NOTE_PATH_SEPARATOR = "\u0000"
 
         private val CHECKLIST_REGEX = Regex("""^(\s*)-\s*\[([ xX])\]\s*(.*)$""")
         private val HEADING_REGEX = Regex("""^(#{1,6})\s+(.+)$""")
@@ -398,7 +400,7 @@ class VaultManager(private val context: Context, private val widgetId: Int = -1)
             val name = file.name?.removeSuffix(".md") ?: "Note"
             val content = readFileContent(file.uri)?.trimEnd() ?: continue
             val notePath = if (fp.isNotBlank()) "$fp/$name" else name
-            parts.add("## $name\u0000$notePath\n$content")
+            parts.add("## $name${NOTE_PATH_SEPARATOR}$notePath\n$content")
         }
         return if (parts.isNotEmpty()) parts.joinToString("\n") else null
     }
@@ -540,7 +542,7 @@ class VaultManager(private val context: Context, private val widgetId: Int = -1)
             } else if (headingMatch != null) {
                 val rawText = headingMatch.groupValues[2].trim()
                 // Extract note path from metadata marker (null byte separator)
-                val parts = rawText.split("\u0000", limit = 2)
+                val parts = rawText.split(NOTE_PATH_SEPARATOR, limit = 2)
                 val text = parts[0]
                 val notePath = if (parts.size > 1) parts[1] else null
                 items.add(ChecklistItem(lineIndex = index, text = text, isChecked = false, isPlainText = true, isHeading = true, notePath = notePath))

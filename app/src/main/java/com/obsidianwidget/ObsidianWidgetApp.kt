@@ -20,6 +20,10 @@ class ObsidianWidgetApp : Application() {
     private val contentObservers = mutableListOf<ContentObserver>()
     private var lastNightMode: Int = -1
 
+    companion object {
+        private const val CONTENT_UPDATE_DEBOUNCE_MS = 2000L
+    }
+
     private val screenUnlockReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             if (intent.action == Intent.ACTION_USER_PRESENT) {
@@ -88,7 +92,7 @@ class ObsidianWidgetApp : Application() {
                 override fun onChange(selfChange: Boolean, changeUri: Uri?) {
                     // Debounce updates to avoid spam
                     handler.removeCallbacks(pendingUpdateRunnable)
-                    handler.postDelayed(pendingUpdateRunnable, 2000)
+                    handler.postDelayed(pendingUpdateRunnable, CONTENT_UPDATE_DEBOUNCE_MS)
                 }
             }
             try {

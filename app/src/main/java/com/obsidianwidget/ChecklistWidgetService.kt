@@ -241,7 +241,7 @@ class ChecklistRemoteViewsFactory(
     override fun getViewTypeCount(): Int = 4
     override fun getItemId(position: Int): Long {
         val item = items[position]
-        return if (item.isSpacer) -(position.toLong() + 1) else item.lineIndex.toLong()
+        return if (item.isSpacer) Long.MIN_VALUE + position.toLong() else item.lineIndex.toLong()
     }
     override fun hasStableIds(): Boolean = true
 }
