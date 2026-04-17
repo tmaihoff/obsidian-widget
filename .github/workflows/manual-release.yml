@@ -39,6 +39,10 @@ jobs:
       - name: Rename APK
         run: |
           APK=$(find app/build/outputs/apk/release -name '*.apk' | head -1)
+          if [ -z "$APK" ]; then
+            echo "::error::No APK found in app/build/outputs/apk/release"
+            exit 1
+          fi
           cp "$APK" "obsidian-widget-${{ inputs.version }}.apk"
 
       - name: Create GitHub Release
