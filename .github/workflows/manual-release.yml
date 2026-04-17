@@ -8,10 +8,15 @@ on:
         required: false
         default: 'main'
         type: string
-      version:
-        description: 'Release version (e.g. 1.0.0)'
+      bump:
+        description: 'Version bump type'
         required: true
-        type: string
+        default: 'patch'
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
 
 jobs:
   release:
@@ -23,6 +28,36 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ inputs.branch }}
+
+      - name: Compute next version
+        id: version
+        run: |
+          git fetch --tags
+          # Get the latest semver tag (strip leading 'v')
+          LATEST=$(git tag -l 'v*' | sed 's/^v//' | sort -V | tail -1)
+          if [ -z "$LATEST" ]; then
+            LATEST="0.0.0"
+          fi
+          MAJOR=$(echo "$LATEST" | cut -d. -f1)
+          MINOR=$(echo "$LATEST" | cut -d. -f2)
+          PATCH=$(echo "$LATEST" | cut -d. -f3)
+          case "${{ inputs.bump }}" in
+            major)
+              MAJOR=$((MAJOR + 1))
+              MINOR=0
+              PATCH=0
+              ;;
+            minor)
+              MINOR=$((MINOR + 1))
+              PATCH=0
+              ;;
+            patch)
+              PATCH=$((PATCH + 1))
+              ;;
+          esac
+          VERSION="${MAJOR}.${MINOR}.${PATCH}"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Bumping ${{ inputs.bump }}: $LATEST -> $VERSION"
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -43,12 +78,12 @@ jobs:
             echo "::error::No APK found in app/build/outputs/apk/release"
             exit 1
           fi
-          cp "$APK" "obsidian-widget-${{ inputs.version }}.apk"
+          cp "$APK" "obsidian-widget-${{ steps.version.outputs.version }}.apk"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: obsidian-widget-${{ inputs.version }}.apk
+          files: obsidian-widget-${{ steps.version.outputs.version }}.apk
           generate_release_notes: true
-          tag_name: v${{ inputs.version }}
+          tag_name: v${{ steps.version.outputs.version }}
           target_commitish: ${{ inputs.branch }}
