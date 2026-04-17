@@ -383,6 +383,37 @@
                 android:letterSpacing="0.1"
                 android:layout_marginBottom="10dp" />
 
+            <!-- Widget Style -->
+            <RadioGroup
+                android:id="@+id/config_widget_style_group"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/input_background"
+                android:orientation="horizontal"
+                android:padding="12dp"
+                android:layout_marginBottom="8dp">
+
+                <RadioButton
+                    android:id="@+id/config_style_obsidian"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Obsidian"
+                    android:textColor="@color/obsidian_text"
+                    android:textSize="13sp"
+                    android:buttonTint="@color/obsidian_primary" />
+
+                <RadioButton
+                    android:id="@+id/config_style_keep"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Keep"
+                    android:textColor="@color/obsidian_text"
+                    android:textSize="13sp"
+                    android:buttonTint="@color/obsidian_primary" />
+            </RadioGroup>
+
             <!-- Theme -->
             <RadioGroup
                 android:id="@+id/config_theme_group"
@@ -409,6 +440,16 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:text="Light"
+                    android:textColor="@color/obsidian_text"
+                    android:textSize="13sp"
+                    android:buttonTint="@color/obsidian_primary" />
+
+                <RadioButton
+                    android:id="@+id/config_theme_system"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="System"
                     android:textColor="@color/obsidian_text"
                     android:textSize="13sp"
                     android:buttonTint="@color/obsidian_primary" />

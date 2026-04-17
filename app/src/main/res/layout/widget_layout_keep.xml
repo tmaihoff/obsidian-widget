@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/keep_widget_background"
+    android:padding="12dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+
+        <!-- Header -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingStart="4dp"
+            android:paddingEnd="4dp"
+            android:paddingBottom="8dp">
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/widget_date"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Daily Note"
+                    android:textColor="#FF1C1B1F"
+                    android:textSize="17sp"
+                    android:fontFamily="sans-serif-medium" />
+
+                <TextView
+                    android:id="@+id/widget_todo_count"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="#FF49454F"
+                    android:textSize="11sp"
+                    android:fontFamily="sans-serif"
+                    android:visibility="gone" />
+            </LinearLayout>
+
+            <ImageButton
+                android:id="@+id/widget_cycle_note"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:layout_marginEnd="8dp"
+                android:background="?android:attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Next note"
+                android:src="@drawable/ic_chevron_right"
+                android:scaleType="centerInside"
+                android:visibility="gone" />
+
+            <ImageButton
+                android:id="@+id/widget_refresh"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:layout_marginEnd="8dp"
+                android:background="?android:attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Refresh"
+                android:src="@android:drawable/stat_notify_sync"
+                android:scaleType="centerInside" />
+
+            <ImageButton
+                android:id="@+id/widget_settings"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:background="?android:attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Settings"
+                android:src="@android:drawable/ic_menu_manage"
+                android:scaleType="centerInside" />
+        </LinearLayout>
+
+        <!-- Note Card -->
+        <LinearLayout
+            android:id="@+id/widget_note_card"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:background="@drawable/keep_note_card_light"
+            android:orientation="vertical"
+            android:padding="12dp">
+
+            <!-- Note Preview (no checklist) -->
+            <TextView
+                android:id="@+id/widget_note_preview"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:text="@string/no_vault_selected"
+                android:textColor="#FF49454F"
+                android:textSize="13sp"
+                android:lineSpacingExtra="3dp"
+                android:maxLines="10"
+                android:ellipsize="end"
+                android:visibility="gone" />
+
+            <!-- Checklist -->
+            <ListView
+                android:id="@+id/widget_checklist"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:divider="@android:color/transparent"
+                android:dividerHeight="0dp"
+                android:scrollbars="none"
+                android:fadingEdge="vertical"
+                android:clipToPadding="false" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- FAB -->
+    <ImageButton
+        android:id="@+id/widget_fab"
+        android:layout_width="56dp"
+        android:layout_height="56dp"
+        android:layout_gravity="bottom|end"
+        android:background="@drawable/keep_fab_background"
+        android:src="@drawable/ic_add"
+        android:scaleType="centerInside"
+        android:contentDescription="Add note"
+        android:padding="16dp" />
+
+</FrameLayout>

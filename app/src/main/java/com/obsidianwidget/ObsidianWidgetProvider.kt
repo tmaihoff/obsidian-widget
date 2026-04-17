@@ -120,8 +120,10 @@ class ObsidianWidgetProvider : AppWidgetProvider() {
         appWidgetManager: AppWidgetManager,
         appWidgetId: Int
     ) {
-        val views = RemoteViews(context.packageName, R.layout.widget_layout)
         val vaultManager = VaultManager(context, appWidgetId)
+        val isKeepStyle = vaultManager.widgetStyle == "keep"
+        val layoutId = if (isKeepStyle) R.layout.widget_layout_keep else R.layout.widget_layout
+        val views = RemoteViews(context.packageName, layoutId)
 
         // Set title based on mode
         val noteCount = when (vaultManager.noteMode) {
@@ -187,12 +189,6 @@ class ObsidianWidgetProvider : AppWidgetProvider() {
             }
         }
 
-        // Add to note button
-        views.setOnClickPendingIntent(
-            R.id.widget_add,
-            createActionIntent(context, ACTION_ADD, appWidgetId)
-        )
-
         // Title click always opens note in Obsidian
         views.setOnClickPendingIntent(
             R.id.widget_date,
@@ -229,6 +225,36 @@ class ObsidianWidgetProvider : AppWidgetProvider() {
             createActionIntent(context, ACTION_REFRESH, appWidgetId)
         )
 
+        // Absorb taps on empty space so they don't trigger launcher reconfigure
+        views.setOnClickPendingIntent(
+            R.id.widget_root,
+            createActionIntent(context, ACTION_REFRESH, appWidgetId)
+        )
+
+        // Apply widget transparency
+        views.setFloat(R.id.widget_root, "setAlpha", vaultManager.widgetAlpha / 100f)
+
+        if (isKeepStyle) {
+            applyKeepStyle(context, views, vaultManager, appWidgetId)
+        } else {
+            applyObsidianStyle(context, views, vaultManager, appWidgetId)
+        }
+
+        appWidgetManager.updateAppWidget(appWidgetId, views)
+    }
+
+    private fun applyObsidianStyle(
+        context: Context,
+        views: RemoteViews,
+        vaultManager: VaultManager,
+        appWidgetId: Int
+    ) {
+        // Add to note button
+        views.setOnClickPendingIntent(
+            R.id.widget_add,
+            createActionIntent(context, ACTION_ADD, appWidgetId)
+        )
+
         // Quick capture button
         views.setOnClickPendingIntent(
             R.id.widget_btn_capture,
@@ -241,18 +267,9 @@ class ObsidianWidgetProvider : AppWidgetProvider() {
             if (vaultManager.showButtons) View.VISIBLE else View.GONE
         )
 
-        // Absorb taps on empty space so they don't trigger launcher reconfigure
-        views.setOnClickPendingIntent(
-            R.id.widget_root,
-            createActionIntent(context, ACTION_REFRESH, appWidgetId)
-        )
-
-        // Apply widget transparency
-        views.setFloat(R.id.widget_root, "setAlpha", vaultManager.widgetAlpha / 100f)
-
         // Apply theme colors
         val colors = vaultManager.getThemeColors()
-        val isDark = vaultManager.widgetTheme == "dark"
+        val isDark = vaultManager.resolveTheme() == "dark"
         views.setInt(R.id.widget_root, "setBackgroundResource",
             if (isDark) R.drawable.widget_background else R.drawable.widget_background_light)
         views.setTextColor(R.id.widget_date, colors.text)
@@ -270,8 +287,76 @@ class ObsidianWidgetProvider : AppWidgetProvider() {
             views.setColorStateList(R.id.widget_btn_capture, "setBackgroundTintList", accentTint)
             views.setColorStateList(R.id.widget_add, "setBackgroundTintList", accentTint)
         }
+    }
 
-        appWidgetManager.updateAppWidget(appWidgetId, views)
+    @Suppress("DEPRECATION")
+    private fun applyKeepStyle(
+        context: Context,
+        views: RemoteViews,
+        vaultManager: VaultManager,
+        appWidgetId: Int
+    ) {
+        val isDark = vaultManager.resolveTheme() == "dark"
+
+        // FAB click = add to note
+        views.setOnClickPendingIntent(
+            R.id.widget_fab,
+            createActionIntent(context, ACTION_ADD, appWidgetId)
+        )
+
+        // Apply dynamic Material You colors on API 31+, or fallback
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            // Use Material You dynamic colors for widget background
+            val bgColorRes = if (isDark)
+                android.R.color.system_accent2_800
+            else
+                android.R.color.system_accent2_100
+            val bgColor = context.getColor(bgColorRes)
+            views.setInt(R.id.widget_root, "setBackgroundResource",
+                if (isDark) R.drawable.keep_widget_background_dark else R.drawable.keep_widget_background)
+            views.setColorStateList(R.id.widget_root, "setBackgroundTintList",
+                ColorStateList.valueOf(bgColor))
+
+            // Note card
+            val cardColor = if (isDark) 0xFF3C3C3C.toInt() else 0xFFFFFFFF.toInt()
+            views.setInt(R.id.widget_note_card, "setBackgroundResource",
+                if (isDark) R.drawable.keep_note_card_dark else R.drawable.keep_note_card_light)
+            views.setColorStateList(R.id.widget_note_card, "setBackgroundTintList",
+                ColorStateList.valueOf(cardColor))
+
+            // FAB with dynamic accent
+            val fabColorRes = if (isDark)
+                android.R.color.system_accent1_200
+            else
+                android.R.color.system_accent1_100
+            val fabColor = context.getColor(fabColorRes)
+            views.setColorStateList(R.id.widget_fab, "setBackgroundTintList",
+                ColorStateList.valueOf(fabColor))
+
+            // FAB icon color
+            val fabIconColor = if (isDark) 0xFFE6E1E5.toInt() else 0xFF1C1B1F.toInt()
+            views.setInt(R.id.widget_fab, "setColorFilter", fabIconColor)
+        } else {
+            // Fallback for pre-S devices
+            views.setInt(R.id.widget_root, "setBackgroundResource",
+                if (isDark) R.drawable.keep_widget_background_dark else R.drawable.keep_widget_background)
+            views.setInt(R.id.widget_note_card, "setBackgroundResource",
+                if (isDark) R.drawable.keep_note_card_dark else R.drawable.keep_note_card_light)
+        }
+
+        // Text colors
+        val titleColor = if (isDark) 0xFFE6E1E5.toInt() else 0xFF1C1B1F.toInt()
+        val bodyColor = if (isDark) 0xFFCAC4D0.toInt() else 0xFF49454F.toInt()
+        val iconColor = if (isDark) 0xFFCAC4D0.toInt() else 0xFF49454F.toInt()
+
+        views.setTextColor(R.id.widget_date, titleColor)
+        views.setTextColor(R.id.widget_note_preview, bodyColor)
+        views.setTextColor(R.id.widget_todo_count, bodyColor)
+
+        // Tint header icons
+        views.setInt(R.id.widget_refresh, "setColorFilter", iconColor)
+        views.setInt(R.id.widget_settings, "setColorFilter", iconColor)
+        views.setInt(R.id.widget_cycle_note, "setColorFilter", iconColor)
     }
 
     private fun createActionIntent(context: Context, action: String, appWidgetId: Int): PendingIntent {
