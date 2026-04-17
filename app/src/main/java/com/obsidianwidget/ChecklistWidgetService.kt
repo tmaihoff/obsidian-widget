@@ -231,7 +231,7 @@ class ChecklistRemoteViewsFactory(
 
         // Apply dynamic card color tint on API 31+
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
-            val cardColor = if (isDark) 0xFF3C3C3C.toInt() else 0xFFFFFFFF.toInt()
+            val cardColor = if (isDark) 0xFF2D2D2D.toInt() else 0xFFFFFFFF.toInt()
             views.setColorStateList(rootId, "setBackgroundTintList",
                 android.content.res.ColorStateList.valueOf(cardColor))
         }
