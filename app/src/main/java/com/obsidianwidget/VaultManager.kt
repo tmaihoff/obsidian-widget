@@ -30,7 +30,8 @@ class VaultManager(private val context: Context, private val widgetId: Int = -1)
         val isNoteEnd: Boolean = false,
         val isSpacer: Boolean = false,
         val notePath: String? = null,
-        val isBookmarked: Boolean = false
+        val isBookmarked: Boolean = false,
+        val isCheckedSummary: Boolean = false
     )
 
     companion object {

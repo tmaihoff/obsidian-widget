@@ -88,7 +88,9 @@ class ObsidianWidgetProvider : AppWidgetProvider() {
                 if (!url.isNullOrEmpty()) {
                     try {
                         val browseIntent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
-                            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                            flags = Intent.FLAG_ACTIVITY_NEW_TASK or
+                                    Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                                    Intent.FLAG_ACTIVITY_SINGLE_TOP
                         }
                         context.startActivity(browseIntent)
                     } catch (_: Exception) { }
