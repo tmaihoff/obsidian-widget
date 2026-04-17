@@ -114,8 +114,8 @@ class ChecklistRemoteViewsFactory(
                 views.setViewPadding(R.id.heading_item_root, padH, padTop, padH, padBottom)
             }
 
-            // Title-only notes (no content) get 1.5x font size
-            val headingTextSize = if (item.isNoteStart && item.isNoteEnd) 24f else 16f
+            // Title-only notes (no content) get slightly larger font size
+            val headingTextSize = if (item.isNoteStart && item.isNoteEnd) 16.8f else 16f
             views.setFloat(R.id.heading_item_content, "setTextSize", headingTextSize)
 
             // In folder mode, clicking a heading opens the note in Obsidian
