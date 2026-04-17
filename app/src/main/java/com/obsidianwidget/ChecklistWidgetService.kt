@@ -78,12 +78,32 @@ class ChecklistRemoteViewsFactory(
 
     override fun onDataSetChanged() {
         val vaultManager = VaultManager(context, widgetId)
-        items = vaultManager.parseChecklist()
+        val allItems = vaultManager.parseChecklist()
         tapCheckboxOnly = vaultManager.tapCheckboxOnly
         themeColors = vaultManager.getThemeColors()
         isKeepFolder = vaultManager.widgetStyle == "keep" && vaultManager.noteMode == VaultManager.NoteMode.FOLDER
         isDark = vaultManager.resolveTheme() == "dark"
         vaultName = vaultManager.vaultName
+
+        // Hide checked items and add a summary at the bottom
+        val checkedCount = allItems.count { !it.isPlainText && it.isChecked }
+        val filtered = allItems.filter { it.isPlainText || !it.isChecked }
+
+        val displayItems = if (isKeepFolder && checkedCount > 0) {
+            recalculateFolderBoundaries(filtered)
+        } else {
+            filtered
+        }.toMutableList()
+
+        if (checkedCount > 0) {
+            val label = if (checkedCount == 1) "item" else "items"
+            displayItems.add(VaultManager.ChecklistItem(
+                lineIndex = -1, text = "+ $checkedCount checked $label",
+                isChecked = false, isPlainText = true, isCheckedSummary = true
+            ))
+        }
+
+        items = displayItems
     }
 
     override fun onDestroy() {
@@ -159,7 +179,8 @@ class ChecklistRemoteViewsFactory(
             val views = RemoteViews(context.packageName, R.layout.widget_text_item)
             val displayText = if (item.isBullet) "•  ${item.text}" else item.text
             views.setTextViewText(R.id.text_item_content, markdownToHtml(displayText))
-            views.setTextColor(R.id.text_item_content, themeColors.text)
+            views.setTextColor(R.id.text_item_content,
+                if (item.isCheckedSummary) themeColors.textSecondary else themeColors.text)
             val density = context.resources.displayMetrics.density
             val indentPx = (item.indentLevel * 16 * density).toInt()
             if (isKeepFolder) {
@@ -272,11 +293,41 @@ class ChecklistRemoteViewsFactory(
         }
     }
 
+    /**
+     * Recalculate folder note boundaries after filtering out checked items.
+     * Strips spacers, re-marks note start/end, and re-inserts spacers.
+     */
+    private fun recalculateFolderBoundaries(items: List<VaultManager.ChecklistItem>): List<VaultManager.ChecklistItem> {
+        val stripped = items.filter { !it.isSpacer }
+            .map { it.copy(isNoteStart = false, isNoteEnd = false) }
+            .toMutableList()
+        if (stripped.isEmpty()) return stripped
+
+        val headingIndices = stripped.indices.filter { stripped[it].isHeading }
+        if (headingIndices.isEmpty()) return stripped
+
+        for (i in headingIndices.indices) {
+            val startIdx = headingIndices[i]
+            val endIdx = if (i + 1 < headingIndices.size) headingIndices[i + 1] - 1 else stripped.lastIndex
+            stripped[startIdx] = stripped[startIdx].copy(isNoteStart = true)
+            stripped[endIdx] = stripped[endIdx].copy(isNoteEnd = true)
+        }
+
+        val result = mutableListOf<VaultManager.ChecklistItem>()
+        for (item in stripped) {
+            if (item.isNoteStart && result.isNotEmpty()) {
+                result.add(VaultManager.ChecklistItem(lineIndex = -1, text = "", isChecked = false, isPlainText = true, isSpacer = true))
+            }
+            result.add(item)
+        }
+        return result
+    }
+
     override fun getLoadingView(): RemoteViews? = null
     override fun getViewTypeCount(): Int = 4
     override fun getItemId(position: Int): Long {
         val item = items[position]
-        return if (item.isSpacer) Long.MIN_VALUE + position.toLong() else item.lineIndex.toLong()
+        return if (item.isSpacer || item.isCheckedSummary) Long.MIN_VALUE + position.toLong() else item.lineIndex.toLong()
     }
     override fun hasStableIds(): Boolean = true
 }
