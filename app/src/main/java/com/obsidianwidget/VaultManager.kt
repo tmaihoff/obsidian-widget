@@ -29,7 +29,8 @@ class VaultManager(private val context: Context, private val widgetId: Int = -1)
         val isNoteStart: Boolean = false,
         val isNoteEnd: Boolean = false,
         val isSpacer: Boolean = false,
-        val notePath: String? = null
+        val notePath: String? = null,
+        val isBookmarked: Boolean = false
     )
 
     companion object {
@@ -58,9 +59,12 @@ class VaultManager(private val context: Context, private val widgetId: Int = -1)
         private const val KEY_FOLDER_PATH = "folder_path"
         private const val KEY_WIDGET_STYLE = "widget_style"
         private const val KEY_SHOW_HEADER = "show_header"
+        private const val KEY_SORT_BOOKMARKED = "sort_bookmarked"
         private const val DEFAULT_DATE_FORMAT = "yyyy-MM-dd"
         /** Separator between note title and note path in folder mode headings. */
         private const val NOTE_PATH_SEPARATOR = "\u0000"
+        /** Marker appended after note path to indicate bookmarked status. */
+        private const val BOOKMARK_MARKER = "\u0001"
 
         private val CHECKLIST_REGEX = Regex("""^(\s*)-\s*\[([ xX])\]\s*(.*)$""")
         private val HEADING_REGEX = Regex("""^(#{1,6})\s+(.+)$""")
@@ -89,6 +93,7 @@ class VaultManager(private val context: Context, private val widgetId: Int = -1)
                 .remove("${KEY_FOLDER_PATH}_$widgetId")
                 .remove("${KEY_WIDGET_STYLE}_$widgetId")
                 .remove("${KEY_SHOW_HEADER}_$widgetId")
+                .remove("${KEY_SORT_BOOKMARKED}_$widgetId")
                 .apply()
         }
     }
@@ -254,6 +259,10 @@ class VaultManager(private val context: Context, private val widgetId: Int = -1)
         get() = prefs.getBoolean(wk(KEY_SHOW_HEADER), true)
         set(value) = prefs.edit().putBoolean(wk(KEY_SHOW_HEADER), value).apply()
 
+    var sortBookmarkedToTop: Boolean
+        get() = prefs.getBoolean(wk(KEY_SORT_BOOKMARKED), false)
+        set(value) = prefs.edit().putBoolean(wk(KEY_SORT_BOOKMARKED), value).apply()
+
     /**
      * Resolve the effective theme, handling "system" by checking the device night mode.
      */
@@ -314,7 +323,8 @@ class VaultManager(private val context: Context, private val widgetId: Int = -1)
         showTodoCount: Boolean,
         folderPath: String = "",
         widgetStyle: String = "obsidian",
-        showHeader: Boolean = true
+        showHeader: Boolean = true,
+        sortBookmarkedToTop: Boolean = false
     ) {
         prefs.edit()
             .putString(wk(KEY_DAILY_FOLDER), dailyFolder)
@@ -332,6 +342,7 @@ class VaultManager(private val context: Context, private val widgetId: Int = -1)
             .putString(wk(KEY_FOLDER_PATH), folderPath)
             .putString(wk(KEY_WIDGET_STYLE), widgetStyle)
             .putBoolean(wk(KEY_SHOW_HEADER), showHeader)
+            .putBoolean(wk(KEY_SORT_BOOKMARKED), sortBookmarkedToTop)
             .commit()
     }
 
@@ -388,19 +399,78 @@ class VaultManager(private val context: Context, private val widgetId: Int = -1)
     }
 
     /**
+     * Read the set of bookmarked file paths from .obsidian/bookmarks.json.
+     * Returns paths relative to the vault root (e.g. "folder/Note.md").
+     */
+    fun getBookmarkedPaths(): Set<String> {
+        val uri = vaultUri ?: return emptySet()
+        val rootDoc = DocumentFile.fromTreeUri(context, uri) ?: return emptySet()
+        val obsidianDir = rootDoc.findFile(".obsidian") ?: return emptySet()
+        val bookmarksFile = obsidianDir.findFile("bookmarks.json") ?: return emptySet()
+        val content = readFileContent(bookmarksFile.uri) ?: return emptySet()
+        return parseBookmarkPaths(content)
+    }
+
+    /**
+     * Parse bookmarked file paths from the bookmarks.json content.
+     * Handles nested groups recursively.
+     */
+    private fun parseBookmarkPaths(json: String): Set<String> {
+        val paths = mutableSetOf<String>()
+        try {
+            val root = org.json.JSONObject(json)
+            val items = root.optJSONArray("items") ?: return paths
+            collectBookmarkPaths(items, paths)
+        } catch (_: Exception) { }
+        return paths
+    }
+
+    private fun collectBookmarkPaths(items: org.json.JSONArray, paths: MutableSet<String>) {
+        for (i in 0 until items.length()) {
+            val item = items.optJSONObject(i) ?: continue
+            val type = item.optString("type")
+            if (type == "file") {
+                val path = item.optString("path")
+                if (path.isNotEmpty()) paths.add(path)
+            } else if (type == "group") {
+                val children = item.optJSONArray("items")
+                if (children != null) collectBookmarkPaths(children, paths)
+            }
+        }
+    }
+
+    /**
      * Read all notes from the configured folder, concatenated with heading separators.
      * The heading format includes a metadata marker: ## NoteName\u0000folderPath/NoteName
+     * Bookmarked notes are marked with an additional \u0001 at the end.
      */
     fun readFolderNotes(): String? {
         val files = getFolderNoteFiles()
         if (files.isEmpty()) return null
+
+        val bookmarkedPaths = getBookmarkedPaths()
+
+        // Sort bookmarked files to top if enabled
+        val sortedFiles = if (sortBookmarkedToTop && bookmarkedPaths.isNotEmpty()) {
+            val fp = folderPath
+            files.sortedWith(compareByDescending<DocumentFile> { file ->
+                val name = file.name ?: ""
+                val filePath = if (fp.isNotBlank()) "$fp/$name" else name
+                filePath in bookmarkedPaths
+            }.thenBy { it.name?.lowercase() })
+        } else {
+            files
+        }
+
         val parts = mutableListOf<String>()
         val fp = folderPath
-        for (file in files) {
+        for (file in sortedFiles) {
             val name = file.name?.removeSuffix(".md") ?: "Note"
             val content = readFileContent(file.uri)?.trimEnd() ?: continue
             val notePath = if (fp.isNotBlank()) "$fp/$name" else name
-            parts.add("## $name${NOTE_PATH_SEPARATOR}$notePath\n$content")
+            val filePathWithExt = if (fp.isNotBlank()) "$fp/${file.name}" else (file.name ?: "")
+            val bookmarkSuffix = if (filePathWithExt in bookmarkedPaths) BOOKMARK_MARKER else ""
+            parts.add("## $name${NOTE_PATH_SEPARATOR}$notePath$bookmarkSuffix\n$content")
         }
         return if (parts.isNotEmpty()) parts.joinToString("\n") else null
     }
@@ -541,11 +611,13 @@ class VaultManager(private val context: Context, private val widgetId: Int = -1)
                 items.add(ChecklistItem(lineIndex = index, text = text, isChecked = checked, indentLevel = indentLevel))
             } else if (headingMatch != null) {
                 val rawText = headingMatch.groupValues[2].trim()
-                // Extract note path from metadata marker (null byte separator)
+                // Extract note path and bookmark marker from metadata
                 val parts = rawText.split(NOTE_PATH_SEPARATOR, limit = 2)
                 val text = parts[0]
-                val notePath = if (parts.size > 1) parts[1] else null
-                items.add(ChecklistItem(lineIndex = index, text = text, isChecked = false, isPlainText = true, isHeading = true, notePath = notePath))
+                val metaPart = if (parts.size > 1) parts[1] else null
+                val isBookmarked = metaPart?.endsWith(BOOKMARK_MARKER) == true
+                val notePath = metaPart?.removeSuffix(BOOKMARK_MARKER)
+                items.add(ChecklistItem(lineIndex = index, text = text, isChecked = false, isPlainText = true, isHeading = true, notePath = notePath, isBookmarked = isBookmarked))
             } else {
                 val bulletMatch = BULLET_REGEX.matchEntire(line)
                 if (bulletMatch != null) {

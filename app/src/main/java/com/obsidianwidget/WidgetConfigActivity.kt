@@ -35,6 +35,7 @@ class WidgetConfigActivity : AppCompatActivity() {
     private lateinit var showButtonsToggle: Switch
     private lateinit var showHeaderToggle: Switch
     private lateinit var sortUncheckedToggle: Switch
+    private lateinit var sortBookmarkedToggle: Switch
     private lateinit var tapCheckboxOnlyToggle: Switch
     private lateinit var showAddToTopToggle: Switch
     private lateinit var showTodoCountToggle: Switch
@@ -99,6 +100,7 @@ class WidgetConfigActivity : AppCompatActivity() {
         showButtonsToggle = findViewById(R.id.config_show_buttons)
         showHeaderToggle = findViewById(R.id.config_show_header)
         sortUncheckedToggle = findViewById(R.id.config_sort_unchecked)
+        sortBookmarkedToggle = findViewById(R.id.config_sort_bookmarked)
         tapCheckboxOnlyToggle = findViewById(R.id.config_tap_checkbox_only)
         showAddToTopToggle = findViewById(R.id.config_show_add_to_top)
         showTodoCountToggle = findViewById(R.id.config_show_todo_count)
@@ -177,6 +179,7 @@ class WidgetConfigActivity : AppCompatActivity() {
         showButtonsToggle.isChecked = vaultManager.showButtons
         showHeaderToggle.isChecked = vaultManager.showHeader
         sortUncheckedToggle.isChecked = vaultManager.sortUnchecked
+        sortBookmarkedToggle.isChecked = vaultManager.sortBookmarkedToTop
         tapCheckboxOnlyToggle.isChecked = vaultManager.tapCheckboxOnly
         showAddToTopToggle.isChecked = vaultManager.showAddToTop
         showTodoCountToggle.isChecked = vaultManager.showTodoCount
@@ -339,7 +342,8 @@ class WidgetConfigActivity : AppCompatActivity() {
             showTodoCount = showTodoCountToggle.isChecked,
             folderPath = folderPathInput.text.toString().trim(),
             widgetStyle = if (widgetStyleGroup.checkedRadioButtonId == R.id.config_style_keep) "keep" else "obsidian",
-            showHeader = showHeaderToggle.isChecked
+            showHeader = showHeaderToggle.isChecked,
+            sortBookmarkedToTop = sortBookmarkedToggle.isChecked
         )
 
         // Trigger update for this specific widget
