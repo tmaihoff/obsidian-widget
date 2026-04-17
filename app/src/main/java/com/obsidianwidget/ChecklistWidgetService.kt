@@ -202,7 +202,7 @@ class ChecklistRemoteViewsFactory(
                 val obsidianUri = android.net.Uri.Builder()
                     .scheme("obsidian")
                     .authority("open")
-                    .appendQueryParameter("vault", vaultName!!)
+                    .appendQueryParameter("vault", vaultName)
                     .appendQueryParameter("file", item.notePath)
                     .build()
                 views.setOnClickFillInIntent(R.id.text_item_root, Intent().apply {
@@ -275,7 +275,7 @@ class ChecklistRemoteViewsFactory(
                 val obsidianUri = android.net.Uri.Builder()
                     .scheme("obsidian")
                     .authority("open")
-                    .appendQueryParameter("vault", vaultName!!)
+                    .appendQueryParameter("vault", vaultName)
                     .appendQueryParameter("file", item.notePath)
                     .build()
                 views.setOnClickFillInIntent(R.id.checklist_item_root, Intent().apply {
