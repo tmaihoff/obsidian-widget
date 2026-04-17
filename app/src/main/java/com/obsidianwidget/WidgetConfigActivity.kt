@@ -39,6 +39,7 @@ class WidgetConfigActivity : AppCompatActivity() {
     private lateinit var showTodoCountToggle: Switch
     private lateinit var dateFormatInput: EditText
     private lateinit var themeGroup: RadioGroup
+    private lateinit var widgetStyleGroup: RadioGroup
     private var selectedAccentColor: String = "#D97757"
     private val colorSwatchIds = listOf(
         R.id.color_terracotta, R.id.color_purple, R.id.color_blue, R.id.color_green,
@@ -101,6 +102,7 @@ class WidgetConfigActivity : AppCompatActivity() {
         showTodoCountToggle = findViewById(R.id.config_show_todo_count)
         dateFormatInput = findViewById(R.id.config_date_format)
         themeGroup = findViewById(R.id.config_theme_group)
+        widgetStyleGroup = findViewById(R.id.config_widget_style_group)
 
         // Set up accent color swatches
         setupColorSwatches()
@@ -181,7 +183,18 @@ class WidgetConfigActivity : AppCompatActivity() {
         transparencyLabel.text = "${vaultManager.widgetAlpha}%"
 
         // Theme
-        themeGroup.check(if (vaultManager.widgetTheme == "light") R.id.config_theme_light else R.id.config_theme_dark)
+        themeGroup.check(
+            when (vaultManager.widgetTheme) {
+                "light" -> R.id.config_theme_light
+                "system" -> R.id.config_theme_system
+                else -> R.id.config_theme_dark
+            }
+        )
+
+        // Widget style
+        widgetStyleGroup.check(
+            if (vaultManager.widgetStyle == "keep") R.id.config_style_keep else R.id.config_style_obsidian
+        )
 
         // Accent color
         selectedAccentColor = vaultManager.accentColor
@@ -314,10 +327,15 @@ class WidgetConfigActivity : AppCompatActivity() {
             tapCheckboxOnly = tapCheckboxOnlyToggle.isChecked,
             addToTop = vaultManager.addToTop,
             showAddToTop = showAddToTopToggle.isChecked,
-            widgetTheme = if (themeGroup.checkedRadioButtonId == R.id.config_theme_light) "light" else "dark",
+            widgetTheme = when (themeGroup.checkedRadioButtonId) {
+                R.id.config_theme_light -> "light"
+                R.id.config_theme_system -> "system"
+                else -> "dark"
+            },
             accentColor = selectedAccentColor,
             showTodoCount = showTodoCountToggle.isChecked,
-            folderPath = folderPathInput.text.toString().trim()
+            folderPath = folderPathInput.text.toString().trim(),
+            widgetStyle = if (widgetStyleGroup.checkedRadioButtonId == R.id.config_style_keep) "keep" else "obsidian"
         )
 
         // Trigger update for this specific widget

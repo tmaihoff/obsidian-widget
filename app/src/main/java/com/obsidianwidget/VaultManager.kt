@@ -2,6 +2,7 @@ package com.obsidianwidget
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.content.res.Configuration
 import android.net.Uri
 import androidx.documentfile.provider.DocumentFile
 import java.io.BufferedReader
@@ -51,6 +52,7 @@ class VaultManager(private val context: Context, private val widgetId: Int = -1)
         private const val KEY_ACCENT_COLOR = "accent_color"
         private const val KEY_SHOW_TODO_COUNT = "show_todo_count"
         private const val KEY_FOLDER_PATH = "folder_path"
+        private const val KEY_WIDGET_STYLE = "widget_style"
         private const val DEFAULT_DATE_FORMAT = "yyyy-MM-dd"
 
         private val CHECKLIST_REGEX = Regex("""^(\s*)-\s*\[([ xX])\]\s*(.*)$""")
@@ -78,6 +80,7 @@ class VaultManager(private val context: Context, private val widgetId: Int = -1)
                 .remove("${KEY_ACCENT_COLOR}_$widgetId")
                 .remove("${KEY_SHOW_TODO_COUNT}_$widgetId")
                 .remove("${KEY_FOLDER_PATH}_$widgetId")
+                .remove("${KEY_WIDGET_STYLE}_$widgetId")
                 .apply()
         }
     }
@@ -235,8 +238,24 @@ class VaultManager(private val context: Context, private val widgetId: Int = -1)
         get() = prefs.getString(wk(KEY_FOLDER_PATH), "") ?: ""
         set(value) = prefs.edit().putString(wk(KEY_FOLDER_PATH), value).apply()
 
+    var widgetStyle: String
+        get() = prefs.getString(wk(KEY_WIDGET_STYLE), "obsidian") ?: "obsidian"
+        set(value) = prefs.edit().putString(wk(KEY_WIDGET_STYLE), value).apply()
+
+    /**
+     * Resolve the effective theme, handling "system" by checking the device night mode.
+     */
+    fun resolveTheme(): String {
+        val theme = widgetTheme
+        if (theme == "system") {
+            val nightMode = context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK
+            return if (nightMode == Configuration.UI_MODE_NIGHT_YES) "dark" else "light"
+        }
+        return theme
+    }
+
     fun getThemeColors(): ThemeColors {
-        val isDark = widgetTheme == "dark"
+        val isDark = resolveTheme() == "dark"
         val accent = try { android.graphics.Color.parseColor(accentColor) } catch (_: Exception) { 0xFFD97757.toInt() }
         return if (isDark) {
             ThemeColors(
@@ -281,7 +300,8 @@ class VaultManager(private val context: Context, private val widgetId: Int = -1)
         widgetTheme: String,
         accentColor: String,
         showTodoCount: Boolean,
-        folderPath: String = ""
+        folderPath: String = "",
+        widgetStyle: String = "obsidian"
     ) {
         prefs.edit()
             .putString(wk(KEY_DAILY_FOLDER), dailyFolder)
@@ -297,6 +317,7 @@ class VaultManager(private val context: Context, private val widgetId: Int = -1)
             .putString(wk(KEY_ACCENT_COLOR), accentColor)
             .putBoolean(wk(KEY_SHOW_TODO_COUNT), showTodoCount)
             .putString(wk(KEY_FOLDER_PATH), folderPath)
+            .putString(wk(KEY_WIDGET_STYLE), widgetStyle)
             .commit()
     }
 
