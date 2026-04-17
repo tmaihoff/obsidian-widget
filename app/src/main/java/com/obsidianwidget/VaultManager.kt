@@ -15,7 +15,7 @@ import java.time.format.DateTimeFormatter
  */
 class VaultManager(private val context: Context, private val widgetId: Int = -1) {
 
-    enum class NoteMode { DAILY, PINNED }
+    enum class NoteMode { DAILY, PINNED, FOLDER }
 
     data class ChecklistItem(
         val lineIndex: Int,
@@ -50,6 +50,7 @@ class VaultManager(private val context: Context, private val widgetId: Int = -1)
         private const val KEY_WIDGET_THEME = "widget_theme"
         private const val KEY_ACCENT_COLOR = "accent_color"
         private const val KEY_SHOW_TODO_COUNT = "show_todo_count"
+        private const val KEY_FOLDER_PATH = "folder_path"
         private const val DEFAULT_DATE_FORMAT = "yyyy-MM-dd"
 
         private val CHECKLIST_REGEX = Regex("""^(\s*)-\s*\[([ xX])\]\s*(.*)$""")
@@ -76,6 +77,7 @@ class VaultManager(private val context: Context, private val widgetId: Int = -1)
                 .remove("${KEY_WIDGET_THEME}_$widgetId")
                 .remove("${KEY_ACCENT_COLOR}_$widgetId")
                 .remove("${KEY_SHOW_TODO_COUNT}_$widgetId")
+                .remove("${KEY_FOLDER_PATH}_$widgetId")
                 .apply()
         }
     }
@@ -105,7 +107,14 @@ class VaultManager(private val context: Context, private val widgetId: Int = -1)
         set(value) = prefs.edit().putString(wk(KEY_DATE_FORMAT), value).apply()
 
     var noteMode: NoteMode
-        get() = if (prefs.getString(wk(KEY_NOTE_MODE), prefs.getString(KEY_NOTE_MODE, "DAILY")) == "PINNED") NoteMode.PINNED else NoteMode.DAILY
+        get() {
+            val mode = prefs.getString(wk(KEY_NOTE_MODE), prefs.getString(KEY_NOTE_MODE, "DAILY"))
+            return when (mode) {
+                "PINNED" -> NoteMode.PINNED
+                "FOLDER" -> NoteMode.FOLDER
+                else -> NoteMode.DAILY
+            }
+        }
         set(value) = prefs.edit().putString(wk(KEY_NOTE_MODE), value.name).apply()
 
     var pinnedNoteUri: Uri?
@@ -222,6 +231,10 @@ class VaultManager(private val context: Context, private val widgetId: Int = -1)
         get() = prefs.getBoolean(wk(KEY_SHOW_TODO_COUNT), false)
         set(value) = prefs.edit().putBoolean(wk(KEY_SHOW_TODO_COUNT), value).apply()
 
+    var folderPath: String
+        get() = prefs.getString(wk(KEY_FOLDER_PATH), "") ?: ""
+        set(value) = prefs.edit().putString(wk(KEY_FOLDER_PATH), value).apply()
+
     fun getThemeColors(): ThemeColors {
         val isDark = widgetTheme == "dark"
         val accent = try { android.graphics.Color.parseColor(accentColor) } catch (_: Exception) { 0xFFD97757.toInt() }
@@ -267,7 +280,8 @@ class VaultManager(private val context: Context, private val widgetId: Int = -1)
         showAddToTop: Boolean,
         widgetTheme: String,
         accentColor: String,
-        showTodoCount: Boolean
+        showTodoCount: Boolean,
+        folderPath: String = ""
     ) {
         prefs.edit()
             .putString(wk(KEY_DAILY_FOLDER), dailyFolder)
@@ -282,6 +296,7 @@ class VaultManager(private val context: Context, private val widgetId: Int = -1)
             .putString(wk(KEY_WIDGET_THEME), widgetTheme)
             .putString(wk(KEY_ACCENT_COLOR), accentColor)
             .putBoolean(wk(KEY_SHOW_TODO_COUNT), showTodoCount)
+            .putString(wk(KEY_FOLDER_PATH), folderPath)
             .commit()
     }
 
@@ -295,6 +310,7 @@ class VaultManager(private val context: Context, private val widgetId: Int = -1)
         return when (noteMode) {
             NoteMode.DAILY -> readDailyNote()
             NoteMode.PINNED -> readPinnedNote()
+            NoteMode.FOLDER -> readFolderNotes()
         }
     }
 
@@ -305,6 +321,10 @@ class VaultManager(private val context: Context, private val widgetId: Int = -1)
         return when (noteMode) {
             NoteMode.DAILY -> "Daily Note"
             NoteMode.PINNED -> getCurrentPinnedNoteName()?.removeSuffix(".md") ?: "Pinned Note"
+            NoteMode.FOLDER -> {
+                val path = folderPath
+                if (path.isNotBlank()) path.substringAfterLast('/') else "Folder"
+            }
         }
     }
 
@@ -314,6 +334,37 @@ class VaultManager(private val context: Context, private val widgetId: Int = -1)
     fun readPinnedNote(): String? {
         val uri = getCurrentPinnedNoteUri() ?: return null
         return readFileContent(uri)
+    }
+
+    /**
+     * Get the list of .md files in the configured folder, sorted by name.
+     */
+    fun getFolderNoteFiles(): List<DocumentFile> {
+        val uri = vaultUri ?: return emptyList()
+        val rootDoc = DocumentFile.fromTreeUri(context, uri) ?: return emptyList()
+        val targetDir = if (folderPath.isNotBlank()) {
+            findSubDirectory(rootDoc, folderPath)
+        } else {
+            rootDoc
+        } ?: return emptyList()
+        return targetDir.listFiles()
+            .filter { it.isFile && it.name?.endsWith(".md") == true }
+            .sortedBy { it.name?.lowercase() }
+    }
+
+    /**
+     * Read all notes from the configured folder, concatenated with heading separators.
+     */
+    fun readFolderNotes(): String? {
+        val files = getFolderNoteFiles()
+        if (files.isEmpty()) return null
+        val parts = mutableListOf<String>()
+        for (file in files) {
+            val name = file.name?.removeSuffix(".md") ?: "Note"
+            val content = readFileContent(file.uri) ?: continue
+            parts.add("## $name\n$content")
+        }
+        return if (parts.isNotEmpty()) parts.joinToString("\n") else null
     }
 
     /**
@@ -342,6 +393,7 @@ class VaultManager(private val context: Context, private val widgetId: Int = -1)
         return when (noteMode) {
             NoteMode.DAILY -> appendToDailyNote(formatted)
             NoteMode.PINNED -> appendToPinnedNote(formatted)
+            NoteMode.FOLDER -> false // Not supported in folder mode
         }
     }
 
@@ -476,6 +528,9 @@ class VaultManager(private val context: Context, private val widgetId: Int = -1)
      * Toggle a checklist item by its line index in the current widget note.
      */
     fun toggleChecklistItem(lineIndex: Int): Boolean {
+        if (noteMode == NoteMode.FOLDER) {
+            return toggleFolderChecklistItem(lineIndex)
+        }
         val noteUri = getWidgetNoteUri() ?: return false
         val content = readFileContent(noteUri) ?: return false
         val lines = content.lines().toMutableList()
@@ -496,12 +551,53 @@ class VaultManager(private val context: Context, private val widgetId: Int = -1)
     }
 
     /**
+     * Toggle a checklist item in folder mode by mapping the global line index
+     * back to the correct file and local line index.
+     */
+    private fun toggleFolderChecklistItem(globalLineIndex: Int): Boolean {
+        val files = getFolderNoteFiles()
+        if (files.isEmpty()) return false
+
+        var offset = 0
+        for (file in files) {
+            val content = readFileContent(file.uri) ?: continue
+            val fileLines = content.lines()
+            // +1 for the heading line ("## FileName")
+            val headingLines = 1
+            val fileStart = offset + headingLines
+            val fileEnd = fileStart + fileLines.size - 1
+
+            if (globalLineIndex in fileStart..fileEnd) {
+                val localIndex = globalLineIndex - fileStart
+                val lines = fileLines.toMutableList()
+                if (localIndex < 0 || localIndex >= lines.size) return false
+
+                val line = lines[localIndex]
+                val match = CHECKLIST_REGEX.matchEntire(line) ?: return false
+
+                val indent = match.groupValues[1]
+                val currentState = match.groupValues[2]
+                val text = match.groupValues[3]
+
+                val newState = if (currentState.lowercase() == "x") " " else "x"
+                lines[localIndex] = "$indent- [$newState] $text"
+
+                return writeFileContent(file.uri, lines.joinToString("\n"))
+            }
+
+            offset += headingLines + fileLines.size
+        }
+        return false
+    }
+
+    /**
      * Get the URI of the current widget note file.
      */
     fun getWidgetNoteUri(): Uri? {
         return when (noteMode) {
             NoteMode.PINNED -> getCurrentPinnedNoteUri()
             NoteMode.DAILY -> getDailyNoteUri()
+            NoteMode.FOLDER -> null // Folder mode uses multiple files
         }
     }
 

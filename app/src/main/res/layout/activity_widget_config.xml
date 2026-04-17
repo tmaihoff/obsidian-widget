@@ -103,6 +103,16 @@
                     android:textColor="@color/obsidian_text"
                     android:textSize="13sp"
                     android:buttonTint="@color/obsidian_primary" />
+
+                <RadioButton
+                    android:id="@+id/config_radio_folder"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/mode_folder"
+                    android:textColor="@color/obsidian_text"
+                    android:textSize="13sp"
+                    android:buttonTint="@color/obsidian_primary" />
             </RadioGroup>
 
             <!-- Pinned Notes -->
@@ -163,6 +173,29 @@
                     android:background="@drawable/input_background"
                     android:text="yyyy-MM-dd"
                     android:hint="@string/date_format_label"
+                    android:textColor="@color/obsidian_text"
+                    android:textColorHint="@color/obsidian_text_secondary"
+                    android:textSize="13sp"
+                    android:paddingStart="14dp"
+                    android:paddingEnd="14dp"
+                    android:inputType="text" />
+            </LinearLayout>
+
+            <!-- Folder Path -->
+            <LinearLayout
+                android:id="@+id/config_folder_section"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone"
+                android:layout_marginBottom="8dp">
+
+                <EditText
+                    android:id="@+id/config_folder_path"
+                    android:layout_width="match_parent"
+                    android:layout_height="42dp"
+                    android:background="@drawable/input_background"
+                    android:hint="@string/folder_path_hint"
                     android:textColor="@color/obsidian_text"
                     android:textColorHint="@color/obsidian_text_secondary"
                     android:textSize="13sp"
