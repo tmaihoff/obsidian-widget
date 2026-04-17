@@ -23,6 +23,9 @@ class ChecklistRemoteViewsFactory(
 
     private var items = listOf<VaultManager.ChecklistItem>()
     private var tapCheckboxOnly = false
+    private var isKeepFolder = false
+    private var isDark = false
+    private var vaultName: String? = null
     private var themeColors = VaultManager.ThemeColors(
         bg = 0xFF1A1A1E.toInt(),
         text = 0xFFE8E6E3.toInt(),
@@ -78,6 +81,9 @@ class ChecklistRemoteViewsFactory(
         items = vaultManager.parseChecklist()
         tapCheckboxOnly = vaultManager.tapCheckboxOnly
         themeColors = vaultManager.getThemeColors()
+        isKeepFolder = vaultManager.widgetStyle == "keep" && vaultManager.noteMode == VaultManager.NoteMode.FOLDER
+        isDark = vaultManager.resolveTheme() == "dark"
+        vaultName = vaultManager.vaultName
     }
 
     override fun onDestroy() {
@@ -89,17 +95,41 @@ class ChecklistRemoteViewsFactory(
     override fun getViewAt(position: Int): RemoteViews {
         val item = items[position]
 
+        // Spacer between folder notes
+        if (item.isSpacer) {
+            return RemoteViews(context.packageName, R.layout.widget_folder_spacer)
+        }
+
         if (item.isHeading) {
             val views = RemoteViews(context.packageName, R.layout.widget_heading_item)
             views.setTextViewText(R.id.heading_item_content, markdownToHtml(item.text))
             views.setTextColor(R.id.heading_item_content, themeColors.text)
-            val url = extractFirstUrl(item.text)
-            if (url != null) {
+
+            // In folder mode, clicking a heading opens the note in Obsidian
+            if (item.notePath != null && vaultName != null) {
+                val obsidianUri = android.net.Uri.Builder()
+                    .scheme("obsidian")
+                    .authority("open")
+                    .appendQueryParameter("vault", vaultName!!)
+                    .appendQueryParameter("file", item.notePath)
+                    .build()
                 views.setOnClickFillInIntent(R.id.heading_item_root, Intent().apply {
-                    putExtra(ObsidianWidgetProvider.EXTRA_URL, url)
+                    putExtra(ObsidianWidgetProvider.EXTRA_URL, obsidianUri.toString())
                 })
             } else {
-                views.setOnClickFillInIntent(R.id.heading_item_root, Intent())
+                val url = extractFirstUrl(item.text)
+                if (url != null) {
+                    views.setOnClickFillInIntent(R.id.heading_item_root, Intent().apply {
+                        putExtra(ObsidianWidgetProvider.EXTRA_URL, url)
+                    })
+                } else {
+                    views.setOnClickFillInIntent(R.id.heading_item_root, Intent())
+                }
+            }
+
+            // Apply folder card background for keep style
+            if (isKeepFolder) {
+                applyFolderCardBackground(views, R.id.heading_item_root, item)
             }
             return views
         }
@@ -119,6 +149,11 @@ class ChecklistRemoteViewsFactory(
                 })
             } else {
                 views.setOnClickFillInIntent(R.id.text_item_root, Intent())
+            }
+
+            // Apply folder card background for keep style
+            if (isKeepFolder) {
+                applyFolderCardBackground(views, R.id.text_item_root, item)
             }
             return views
         }
@@ -171,11 +206,42 @@ class ChecklistRemoteViewsFactory(
             views.setOnClickFillInIntent(R.id.checklist_item_root, fillIntent)
         }
 
+        // Apply folder card background for keep style
+        if (isKeepFolder) {
+            applyFolderCardBackground(views, R.id.checklist_item_root, item)
+        }
+
         return views
     }
 
+    /**
+     * Apply appropriate card background drawable for folder mode items in keep style.
+     * Items at note boundaries get rounded corners; middle items get flat edges.
+     */
+    private fun applyFolderCardBackground(views: RemoteViews, rootId: Int, item: VaultManager.ChecklistItem) {
+        val isStart = item.isNoteStart
+        val isEnd = item.isNoteEnd
+        val bgRes = when {
+            isStart && isEnd -> if (isDark) R.drawable.keep_note_card_dark else R.drawable.keep_note_card_light
+            isStart -> if (isDark) R.drawable.keep_folder_card_top_dark else R.drawable.keep_folder_card_top_light
+            isEnd -> if (isDark) R.drawable.keep_folder_card_bottom_dark else R.drawable.keep_folder_card_bottom_light
+            else -> if (isDark) R.drawable.keep_folder_card_mid_dark else R.drawable.keep_folder_card_mid_light
+        }
+        views.setInt(rootId, "setBackgroundResource", bgRes)
+
+        // Apply dynamic card color tint on API 31+
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+            val cardColor = if (isDark) 0xFF3C3C3C.toInt() else 0xFFFFFFFF.toInt()
+            views.setColorStateList(rootId, "setBackgroundTintList",
+                android.content.res.ColorStateList.valueOf(cardColor))
+        }
+    }
+
     override fun getLoadingView(): RemoteViews? = null
-    override fun getViewTypeCount(): Int = 3
-    override fun getItemId(position: Int): Long = items[position].lineIndex.toLong()
+    override fun getViewTypeCount(): Int = 4
+    override fun getItemId(position: Int): Long {
+        val item = items[position]
+        return if (item.isSpacer) -(position.toLong() + 1) else item.lineIndex.toLong()
+    }
     override fun hasStableIds(): Boolean = true
 }

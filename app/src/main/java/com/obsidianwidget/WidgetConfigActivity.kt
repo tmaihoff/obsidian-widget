@@ -33,6 +33,7 @@ class WidgetConfigActivity : AppCompatActivity() {
     private lateinit var transparencySeekBar: SeekBar
     private lateinit var transparencyLabel: TextView
     private lateinit var showButtonsToggle: Switch
+    private lateinit var showHeaderToggle: Switch
     private lateinit var sortUncheckedToggle: Switch
     private lateinit var tapCheckboxOnlyToggle: Switch
     private lateinit var showAddToTopToggle: Switch
@@ -96,6 +97,7 @@ class WidgetConfigActivity : AppCompatActivity() {
         transparencySeekBar = findViewById(R.id.config_transparency)
         transparencyLabel = findViewById(R.id.config_transparency_label)
         showButtonsToggle = findViewById(R.id.config_show_buttons)
+        showHeaderToggle = findViewById(R.id.config_show_header)
         sortUncheckedToggle = findViewById(R.id.config_sort_unchecked)
         tapCheckboxOnlyToggle = findViewById(R.id.config_tap_checkbox_only)
         showAddToTopToggle = findViewById(R.id.config_show_add_to_top)
@@ -173,6 +175,7 @@ class WidgetConfigActivity : AppCompatActivity() {
         refreshNoteList()
         folderPathInput.setText(vaultManager.folderPath)
         showButtonsToggle.isChecked = vaultManager.showButtons
+        showHeaderToggle.isChecked = vaultManager.showHeader
         sortUncheckedToggle.isChecked = vaultManager.sortUnchecked
         tapCheckboxOnlyToggle.isChecked = vaultManager.tapCheckboxOnly
         showAddToTopToggle.isChecked = vaultManager.showAddToTop
@@ -335,7 +338,8 @@ class WidgetConfigActivity : AppCompatActivity() {
             accentColor = selectedAccentColor,
             showTodoCount = showTodoCountToggle.isChecked,
             folderPath = folderPathInput.text.toString().trim(),
-            widgetStyle = if (widgetStyleGroup.checkedRadioButtonId == R.id.config_style_keep) "keep" else "obsidian"
+            widgetStyle = if (widgetStyleGroup.checkedRadioButtonId == R.id.config_style_keep) "keep" else "obsidian",
+            showHeader = showHeaderToggle.isChecked
         )
 
         // Trigger update for this specific widget

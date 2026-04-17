@@ -25,7 +25,11 @@ class VaultManager(private val context: Context, private val widgetId: Int = -1)
         val isPlainText: Boolean = false,
         val isHeading: Boolean = false,
         val isBullet: Boolean = false,
-        val indentLevel: Int = 0
+        val indentLevel: Int = 0,
+        val isNoteStart: Boolean = false,
+        val isNoteEnd: Boolean = false,
+        val isSpacer: Boolean = false,
+        val notePath: String? = null
     )
 
     companion object {
@@ -53,6 +57,7 @@ class VaultManager(private val context: Context, private val widgetId: Int = -1)
         private const val KEY_SHOW_TODO_COUNT = "show_todo_count"
         private const val KEY_FOLDER_PATH = "folder_path"
         private const val KEY_WIDGET_STYLE = "widget_style"
+        private const val KEY_SHOW_HEADER = "show_header"
         private const val DEFAULT_DATE_FORMAT = "yyyy-MM-dd"
 
         private val CHECKLIST_REGEX = Regex("""^(\s*)-\s*\[([ xX])\]\s*(.*)$""")
@@ -81,6 +86,7 @@ class VaultManager(private val context: Context, private val widgetId: Int = -1)
                 .remove("${KEY_SHOW_TODO_COUNT}_$widgetId")
                 .remove("${KEY_FOLDER_PATH}_$widgetId")
                 .remove("${KEY_WIDGET_STYLE}_$widgetId")
+                .remove("${KEY_SHOW_HEADER}_$widgetId")
                 .apply()
         }
     }
@@ -242,6 +248,10 @@ class VaultManager(private val context: Context, private val widgetId: Int = -1)
         get() = prefs.getString(wk(KEY_WIDGET_STYLE), "obsidian") ?: "obsidian"
         set(value) = prefs.edit().putString(wk(KEY_WIDGET_STYLE), value).apply()
 
+    var showHeader: Boolean
+        get() = prefs.getBoolean(wk(KEY_SHOW_HEADER), true)
+        set(value) = prefs.edit().putBoolean(wk(KEY_SHOW_HEADER), value).apply()
+
     /**
      * Resolve the effective theme, handling "system" by checking the device night mode.
      */
@@ -301,7 +311,8 @@ class VaultManager(private val context: Context, private val widgetId: Int = -1)
         accentColor: String,
         showTodoCount: Boolean,
         folderPath: String = "",
-        widgetStyle: String = "obsidian"
+        widgetStyle: String = "obsidian",
+        showHeader: Boolean = true
     ) {
         prefs.edit()
             .putString(wk(KEY_DAILY_FOLDER), dailyFolder)
@@ -318,6 +329,7 @@ class VaultManager(private val context: Context, private val widgetId: Int = -1)
             .putBoolean(wk(KEY_SHOW_TODO_COUNT), showTodoCount)
             .putString(wk(KEY_FOLDER_PATH), folderPath)
             .putString(wk(KEY_WIDGET_STYLE), widgetStyle)
+            .putBoolean(wk(KEY_SHOW_HEADER), showHeader)
             .commit()
     }
 
@@ -375,15 +387,18 @@ class VaultManager(private val context: Context, private val widgetId: Int = -1)
 
     /**
      * Read all notes from the configured folder, concatenated with heading separators.
+     * The heading format includes a metadata marker: ## NoteName\u0000folderPath/NoteName
      */
     fun readFolderNotes(): String? {
         val files = getFolderNoteFiles()
         if (files.isEmpty()) return null
         val parts = mutableListOf<String>()
+        val fp = folderPath
         for (file in files) {
             val name = file.name?.removeSuffix(".md") ?: "Note"
             val content = readFileContent(file.uri)?.trimEnd() ?: continue
-            parts.add("## $name\n$content")
+            val notePath = if (fp.isNotBlank()) "$fp/$name" else name
+            parts.add("## $name\u0000$notePath\n$content")
         }
         return if (parts.isNotEmpty()) parts.joinToString("\n") else null
     }
@@ -512,6 +527,7 @@ class VaultManager(private val context: Context, private val widgetId: Int = -1)
     fun parseChecklist(): List<ChecklistItem> {
         val content = readWidgetNote() ?: return emptyList()
         val items = mutableListOf<ChecklistItem>()
+        val isFolder = noteMode == NoteMode.FOLDER
         content.lines().forEachIndexed { index, line ->
             val match = CHECKLIST_REGEX.matchEntire(line)
             val headingMatch = HEADING_REGEX.matchEntire(line)
@@ -522,8 +538,12 @@ class VaultManager(private val context: Context, private val widgetId: Int = -1)
                 val text = match.groupValues[3].trim()
                 items.add(ChecklistItem(lineIndex = index, text = text, isChecked = checked, indentLevel = indentLevel))
             } else if (headingMatch != null) {
-                val text = headingMatch.groupValues[2].trim()
-                items.add(ChecklistItem(lineIndex = index, text = text, isChecked = false, isPlainText = true, isHeading = true))
+                val rawText = headingMatch.groupValues[2].trim()
+                // Extract note path from metadata marker (null byte separator)
+                val parts = rawText.split("\u0000", limit = 2)
+                val text = parts[0]
+                val notePath = if (parts.size > 1) parts[1] else null
+                items.add(ChecklistItem(lineIndex = index, text = text, isChecked = false, isPlainText = true, isHeading = true, notePath = notePath))
             } else {
                 val bulletMatch = BULLET_REGEX.matchEntire(line)
                 if (bulletMatch != null) {
@@ -540,9 +560,39 @@ class VaultManager(private val context: Context, private val widgetId: Int = -1)
             val nonChecklist = items.filter { it.isPlainText }
             val unchecked = items.filter { !it.isPlainText && !it.isChecked }
             val checked = items.filter { !it.isPlainText && it.isChecked }
-            return nonChecklist + unchecked + checked
+            return addFolderBoundaries(nonChecklist + unchecked + checked, isFolder)
         }
-        return items
+        return addFolderBoundaries(items, isFolder)
+    }
+
+    /**
+     * For folder mode, mark note boundaries and insert spacer items between notes.
+     */
+    private fun addFolderBoundaries(items: List<ChecklistItem>, isFolder: Boolean): List<ChecklistItem> {
+        if (!isFolder || items.isEmpty()) return items
+
+        // Find heading indices (note starts)
+        val headingIndices = items.indices.filter { items[it].isHeading }
+        if (headingIndices.isEmpty()) return items
+
+        // Mark note boundaries
+        val marked = items.toMutableList()
+        for (i in headingIndices.indices) {
+            val startIdx = headingIndices[i]
+            val endIdx = if (i + 1 < headingIndices.size) headingIndices[i + 1] - 1 else marked.lastIndex
+            marked[startIdx] = marked[startIdx].copy(isNoteStart = true)
+            marked[endIdx] = marked[endIdx].copy(isNoteEnd = true)
+        }
+
+        // Insert spacers between notes (between noteEnd and next noteStart)
+        val result = mutableListOf<ChecklistItem>()
+        for (item in marked) {
+            if (item.isNoteStart && result.isNotEmpty()) {
+                result.add(ChecklistItem(lineIndex = -1, text = "", isChecked = false, isPlainText = true, isSpacer = true))
+            }
+            result.add(item)
+        }
+        return result
     }
 
     /**

@@ -261,6 +261,12 @@ class ObsidianWidgetProvider : AppWidgetProvider() {
             createActionIntent(context, ACTION_CAPTURE, appWidgetId)
         )
 
+        // Show/hide header based on setting
+        views.setViewVisibility(
+            R.id.widget_header,
+            if (vaultManager.showHeader) View.VISIBLE else View.GONE
+        )
+
         // Show/hide button bar based on setting
         views.setViewVisibility(
             R.id.widget_button_bar,
@@ -304,11 +310,20 @@ class ObsidianWidgetProvider : AppWidgetProvider() {
             createActionIntent(context, ACTION_ADD, appWidgetId)
         )
 
+        // Show/hide header based on setting
+        views.setViewVisibility(
+            R.id.widget_header,
+            if (vaultManager.showHeader) View.VISIBLE else View.GONE
+        )
+
+        // In folder mode, make note card transparent so individual items show their own card backgrounds
+        val isFolder = vaultManager.noteMode == VaultManager.NoteMode.FOLDER
+
         // Apply dynamic Material You colors on API 31+, or fallback
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            // Use Material You dynamic colors for widget background
+            // Use Material You dynamic colors for widget background (darker for dark mode)
             val bgColorRes = if (isDark)
-                android.R.color.system_accent2_800
+                android.R.color.system_accent2_900
             else
                 android.R.color.system_accent2_100
             val bgColor = context.getColor(bgColorRes)
@@ -318,30 +333,52 @@ class ObsidianWidgetProvider : AppWidgetProvider() {
                 ColorStateList.valueOf(bgColor))
 
             // Note card
-            val cardColor = if (isDark) 0xFF3C3C3C.toInt() else 0xFFFFFFFF.toInt()
-            views.setInt(R.id.widget_note_card, "setBackgroundResource",
-                if (isDark) R.drawable.keep_note_card_dark else R.drawable.keep_note_card_light)
-            views.setColorStateList(R.id.widget_note_card, "setBackgroundTintList",
-                ColorStateList.valueOf(cardColor))
+            if (isFolder) {
+                // Transparent note card for folder mode - individual items have their own backgrounds
+                views.setInt(R.id.widget_note_card, "setBackgroundResource", android.R.color.transparent)
+                views.setColorStateList(R.id.widget_note_card, "setBackgroundTintList",
+                    ColorStateList.valueOf(0x00000000))
+                views.setViewPadding(R.id.widget_note_card, 0, 0, 0, 0)
+            } else {
+                val cardColor = if (isDark) 0xFF3C3C3C.toInt() else 0xFFFFFFFF.toInt()
+                views.setInt(R.id.widget_note_card, "setBackgroundResource",
+                    if (isDark) R.drawable.keep_note_card_dark else R.drawable.keep_note_card_light)
+                views.setColorStateList(R.id.widget_note_card, "setBackgroundTintList",
+                    ColorStateList.valueOf(cardColor))
+                val density = context.resources.displayMetrics.density
+                val pad = (12 * density).toInt()
+                views.setViewPadding(R.id.widget_note_card, pad, pad, pad, pad)
+            }
 
-            // FAB with dynamic accent
+            // FAB with different dynamic accent color (darker on dark mode)
             val fabColorRes = if (isDark)
-                android.R.color.system_accent1_200
+                android.R.color.system_accent1_700
             else
-                android.R.color.system_accent1_100
+                android.R.color.system_accent1_200
             val fabColor = context.getColor(fabColorRes)
             views.setColorStateList(R.id.widget_fab, "setBackgroundTintList",
                 ColorStateList.valueOf(fabColor))
 
-            // FAB icon color
-            val fabIconColor = if (isDark) 0xFFE6E1E5.toInt() else 0xFF1C1B1F.toInt()
+            // FAB icon color (slightly less opaque)
+            val fabIconColor = if (isDark) 0xCCE6E1E5.toInt() else 0xCC1C1B1F.toInt()
             views.setInt(R.id.widget_fab, "setColorFilter", fabIconColor)
         } else {
             // Fallback for pre-S devices
             views.setInt(R.id.widget_root, "setBackgroundResource",
                 if (isDark) R.drawable.keep_widget_background_dark else R.drawable.keep_widget_background)
-            views.setInt(R.id.widget_note_card, "setBackgroundResource",
-                if (isDark) R.drawable.keep_note_card_dark else R.drawable.keep_note_card_light)
+            if (isFolder) {
+                views.setInt(R.id.widget_note_card, "setBackgroundResource", android.R.color.transparent)
+                views.setViewPadding(R.id.widget_note_card, 0, 0, 0, 0)
+            } else {
+                views.setInt(R.id.widget_note_card, "setBackgroundResource",
+                    if (isDark) R.drawable.keep_note_card_dark else R.drawable.keep_note_card_light)
+                val density = context.resources.displayMetrics.density
+                val pad = (12 * density).toInt()
+                views.setViewPadding(R.id.widget_note_card, pad, pad, pad, pad)
+            }
+            // FAB icon (slightly less opaque)
+            val fabIconColor = if (isDark) 0xCCE6E1E5.toInt() else 0xCC1C1B1F.toInt()
+            views.setInt(R.id.widget_fab, "setColorFilter", fabIconColor)
         }
 
         // Text colors
