@@ -67,11 +67,7 @@ class ObsidianWidgetProvider : AppWidgetProvider() {
             ACTION_REFRESH -> updateAllWidgets(context)
             ACTION_CAPTURE -> {
                 val widgetId = intent.getIntExtra(EXTRA_WIDGET_ID, -1)
-                val captureIntent = Intent(context, QuickCaptureActivity::class.java).apply {
-                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                    putExtra(EXTRA_WIDGET_ID, widgetId)
-                }
-                context.startActivity(captureIntent)
+                openNewNote(context, widgetId)
             }
             ACTION_ADD -> {
                 val widgetId = intent.getIntExtra(EXTRA_WIDGET_ID, -1)
