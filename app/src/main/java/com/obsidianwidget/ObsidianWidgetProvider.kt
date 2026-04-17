@@ -124,7 +124,10 @@ class ObsidianWidgetProvider : AppWidgetProvider() {
         val vaultManager = VaultManager(context, appWidgetId)
 
         // Set title based on mode
-        val noteCount = if (vaultManager.noteMode == VaultManager.NoteMode.PINNED) vaultManager.getPinnedNoteCount() else 0
+        val noteCount = when (vaultManager.noteMode) {
+            VaultManager.NoteMode.PINNED -> vaultManager.getPinnedNoteCount()
+            else -> 0
+        }
         views.setTextViewText(R.id.widget_date, vaultManager.getWidgetTitle())
 
         // Check if note has checklist items
@@ -297,6 +300,10 @@ class ObsidianWidgetProvider : AppWidgetProvider() {
                     val date = java.time.LocalDate.now()
                         .format(java.time.format.DateTimeFormatter.ofPattern(vaultManager.dateFormat))
                     if (folder.isNotBlank()) "$folder/$date" else date
+                }
+                VaultManager.NoteMode.FOLDER -> {
+                    // Open the folder path in Obsidian (no specific note)
+                    null
                 }
             }
 

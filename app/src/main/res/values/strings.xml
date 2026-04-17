@@ -24,6 +24,8 @@
     <string name="note_mode_label">Widget Shows</string>
     <string name="mode_daily_note">Daily Note</string>
     <string name="mode_specific_note">Specific Note</string>
+    <string name="mode_folder">Folder</string>
+    <string name="folder_path_hint">e.g. Projects/Tasks</string>
     <string name="pinned_note_label">Pinned Note</string>
     <string name="no_note_selected">No note selected</string>
     <string name="select_note">Pick Note</string>

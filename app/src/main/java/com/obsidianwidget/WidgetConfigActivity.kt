@@ -28,6 +28,8 @@ class WidgetConfigActivity : AppCompatActivity() {
     private lateinit var pinnedSection: LinearLayout
     private lateinit var dailySection: LinearLayout
     private lateinit var noteListContainer: LinearLayout
+    private lateinit var folderSection: LinearLayout
+    private lateinit var folderPathInput: EditText
     private lateinit var transparencySeekBar: SeekBar
     private lateinit var transparencyLabel: TextView
     private lateinit var showButtonsToggle: Switch
@@ -88,6 +90,8 @@ class WidgetConfigActivity : AppCompatActivity() {
         pinnedSection = findViewById(R.id.config_pinned_section)
         dailySection = findViewById(R.id.config_daily_section)
         noteListContainer = findViewById(R.id.config_note_list_container)
+        folderSection = findViewById(R.id.config_folder_section)
+        folderPathInput = findViewById(R.id.config_folder_path)
         transparencySeekBar = findViewById(R.id.config_transparency)
         transparencyLabel = findViewById(R.id.config_transparency_label)
         showButtonsToggle = findViewById(R.id.config_show_buttons)
@@ -123,7 +127,7 @@ class WidgetConfigActivity : AppCompatActivity() {
         }
 
         noteModeGroup.setOnCheckedChangeListener { _, checkedId ->
-            updateModeSections(checkedId == R.id.config_radio_pinned)
+            updateModeSections(checkedId)
         }
 
         findViewById<Button>(R.id.config_save).setOnClickListener {
@@ -154,10 +158,18 @@ class WidgetConfigActivity : AppCompatActivity() {
         dailyFolderInput.setText(vaultManager.dailyFolder)
 
         val isPinned = vaultManager.noteMode == VaultManager.NoteMode.PINNED
-        noteModeGroup.check(if (isPinned) R.id.config_radio_pinned else R.id.config_radio_daily)
-        updateModeSections(isPinned)
+        val isFolder = vaultManager.noteMode == VaultManager.NoteMode.FOLDER
+        noteModeGroup.check(
+            when {
+                isPinned -> R.id.config_radio_pinned
+                isFolder -> R.id.config_radio_folder
+                else -> R.id.config_radio_daily
+            }
+        )
+        updateModeSections(noteModeGroup.checkedRadioButtonId)
 
         refreshNoteList()
+        folderPathInput.setText(vaultManager.folderPath)
         showButtonsToggle.isChecked = vaultManager.showButtons
         sortUncheckedToggle.isChecked = vaultManager.sortUnchecked
         tapCheckboxOnlyToggle.isChecked = vaultManager.tapCheckboxOnly
@@ -176,9 +188,10 @@ class WidgetConfigActivity : AppCompatActivity() {
         highlightSelectedColor()
     }
 
-    private fun updateModeSections(isPinned: Boolean) {
-        pinnedSection.visibility = if (isPinned) View.VISIBLE else View.GONE
-        dailySection.visibility = if (isPinned) View.GONE else View.VISIBLE
+    private fun updateModeSections(checkedId: Int) {
+        pinnedSection.visibility = if (checkedId == R.id.config_radio_pinned) View.VISIBLE else View.GONE
+        dailySection.visibility = if (checkedId == R.id.config_radio_daily) View.VISIBLE else View.GONE
+        folderSection.visibility = if (checkedId == R.id.config_radio_folder) View.VISIBLE else View.GONE
     }
 
     private fun onVaultSelected(uri: Uri) {
@@ -286,11 +299,15 @@ class WidgetConfigActivity : AppCompatActivity() {
     }
 
     private fun saveAndFinish() {
+        val selectedMode = when (noteModeGroup.checkedRadioButtonId) {
+            R.id.config_radio_pinned -> VaultManager.NoteMode.PINNED
+            R.id.config_radio_folder -> VaultManager.NoteMode.FOLDER
+            else -> VaultManager.NoteMode.DAILY
+        }
         vaultManager.saveWidgetSettings(
             dailyFolder = dailyFolderInput.text.toString().trim(),
             dateFormat = dateFormatInput.text.toString().trim().ifBlank { "yyyy-MM-dd" },
-            noteMode = if (noteModeGroup.checkedRadioButtonId == R.id.config_radio_pinned)
-                VaultManager.NoteMode.PINNED else VaultManager.NoteMode.DAILY,
+            noteMode = selectedMode,
             showButtons = showButtonsToggle.isChecked,
             sortUnchecked = sortUncheckedToggle.isChecked,
             widgetAlpha = transparencySeekBar.progress,
@@ -299,7 +316,8 @@ class WidgetConfigActivity : AppCompatActivity() {
             showAddToTop = showAddToTopToggle.isChecked,
             widgetTheme = if (themeGroup.checkedRadioButtonId == R.id.config_theme_light) "light" else "dark",
             accentColor = selectedAccentColor,
-            showTodoCount = showTodoCountToggle.isChecked
+            showTodoCount = showTodoCountToggle.isChecked,
+            folderPath = folderPathInput.text.toString().trim()
         )
 
         // Trigger update for this specific widget
