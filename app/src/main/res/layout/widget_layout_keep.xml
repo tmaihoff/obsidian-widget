@@ -114,6 +114,21 @@
         </LinearLayout>
     </LinearLayout>
 
+    <!-- Daily Note Button -->
+    <ImageButton
+        android:id="@+id/widget_daily_btn"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:layout_gravity="bottom|start"
+        android:layout_marginStart="0dp"
+        android:layout_marginBottom="0dp"
+        android:background="@drawable/keep_fab_background"
+        android:src="@drawable/ic_today"
+        android:scaleType="centerInside"
+        android:contentDescription="Open daily note"
+        android:elevation="2dp"
+        android:padding="8dp" />
+
     <!-- FAB -->
     <ImageButton
         android:id="@+id/widget_fab"
@@ -125,7 +140,7 @@
         android:background="@drawable/keep_fab_background"
         android:src="@drawable/ic_add"
         android:scaleType="centerInside"
-        android:contentDescription="Add note"
+        android:contentDescription="New note"
         android:elevation="4dp"
         android:padding="12dp" />
 
