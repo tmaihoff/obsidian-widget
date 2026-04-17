@@ -566,14 +566,12 @@ class ObsidianWidgetProvider : AppWidgetProvider() {
             val vaultManager = VaultManager(context, widgetId)
             val vaultName = vaultManager.vaultName
 
-            val uriBuilder = Uri.Builder()
-                .scheme("obsidian")
-                .authority("new")
-            if (vaultName != null) {
-                uriBuilder.appendQueryParameter("vault", vaultName)
+            val newNoteUriString = if (vaultName != null) {
+                "obsidian://new?vault=${Uri.encode(vaultName)}"
+            } else {
+                "obsidian://new"
             }
-            val newNoteUri = uriBuilder.build()
-
+            val newNoteUri = Uri.parse(newNoteUriString)
             val deepLinkIntent = Intent(Intent.ACTION_VIEW, newNoteUri).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or
                         Intent.FLAG_ACTIVITY_CLEAR_TOP or
