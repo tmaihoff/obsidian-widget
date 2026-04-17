@@ -33,14 +33,16 @@ jobs:
         id: version
         run: |
           git fetch --tags
-          # Get the latest semver tag (strip leading 'v')
-          LATEST=$(git tag -l 'v*' | sed 's/^v//' | sort -V | tail -1)
+          # Get the latest semver tag (strip leading 'v'), only match vN.N or vN.N.N
+          LATEST=$(git tag -l 'v[0-9]*' | sed 's/^v//' | grep -E '^[0-9]+\.[0-9]+(\.[0-9]+)?$' | sort -V | tail -1)
           if [ -z "$LATEST" ]; then
             LATEST="0.0.0"
           fi
           MAJOR=$(echo "$LATEST" | cut -d. -f1)
           MINOR=$(echo "$LATEST" | cut -d. -f2)
           PATCH=$(echo "$LATEST" | cut -d. -f3)
+          # Default missing components to 0 (handles 2-part tags like v1.4)
+          PATCH=${PATCH:-0}
           case "${{ inputs.bump }}" in
             major)
               MAJOR=$((MAJOR + 1))
