@@ -105,6 +105,19 @@ class ChecklistRemoteViewsFactory(
             views.setTextViewText(R.id.heading_item_content, markdownToHtml(item.text))
             views.setTextColor(R.id.heading_item_content, themeColors.text)
 
+            // Apply improved padding for keep folder mode
+            if (isKeepFolder) {
+                val density = context.resources.displayMetrics.density
+                val padH = (10 * density).toInt()
+                val padTop = (10 * density).toInt()
+                val padBottom = if (item.isNoteStart && item.isNoteEnd) (10 * density).toInt() else (4 * density).toInt()
+                views.setViewPadding(R.id.heading_item_root, padH, padTop, padH, padBottom)
+            }
+
+            // Title-only notes (no content) get 1.5x font size
+            val headingTextSize = if (item.isNoteStart && item.isNoteEnd) 24f else 16f
+            views.setFloat(R.id.heading_item_content, "setTextSize", headingTextSize)
+
             // In folder mode, clicking a heading opens the note in Obsidian
             if (item.notePath != null && vaultName != null) {
                 val obsidianUri = android.net.Uri.Builder()
@@ -127,6 +140,14 @@ class ChecklistRemoteViewsFactory(
                 }
             }
 
+            // Show bookmark icon for bookmarked notes
+            if (item.isBookmarked) {
+                views.setViewVisibility(R.id.heading_bookmark_icon, android.view.View.VISIBLE)
+                views.setInt(R.id.heading_bookmark_icon, "setColorFilter", themeColors.textSecondary)
+            } else {
+                views.setViewVisibility(R.id.heading_bookmark_icon, android.view.View.GONE)
+            }
+
             // Apply folder card background for keep style
             if (isKeepFolder) {
                 applyFolderCardBackground(views, R.id.heading_item_root, item)
@@ -141,7 +162,14 @@ class ChecklistRemoteViewsFactory(
             views.setTextColor(R.id.text_item_content, themeColors.text)
             val density = context.resources.displayMetrics.density
             val indentPx = (item.indentLevel * 16 * density).toInt()
-            views.setViewPadding(R.id.text_item_root, indentPx + (4 * density).toInt(), (4 * density).toInt(), (4 * density).toInt(), (4 * density).toInt())
+            if (isKeepFolder) {
+                val padH = (10 * density).toInt()
+                val padV = (6 * density).toInt()
+                val padBottom = if (item.isNoteEnd) (10 * density).toInt() else padV
+                views.setViewPadding(R.id.text_item_root, indentPx + padH, padV, padH, padBottom)
+            } else {
+                views.setViewPadding(R.id.text_item_root, indentPx + (4 * density).toInt(), (4 * density).toInt(), (4 * density).toInt(), (4 * density).toInt())
+            }
             val url = extractFirstUrl(item.text)
             if (url != null) {
                 views.setOnClickFillInIntent(R.id.text_item_root, Intent().apply {
@@ -163,7 +191,14 @@ class ChecklistRemoteViewsFactory(
         // Always set padding (reset for non-indented, indent for nested)
         val density = context.resources.displayMetrics.density
         val indentPx = (item.indentLevel * 16 * density).toInt()
-        views.setViewPadding(R.id.checklist_item_root, indentPx + (4 * density).toInt(), (6 * density).toInt(), (4 * density).toInt(), (6 * density).toInt())
+        if (isKeepFolder) {
+            val padH = (10 * density).toInt()
+            val padV = (6 * density).toInt()
+            val padBottom = if (item.isNoteEnd) (10 * density).toInt() else padV
+            views.setViewPadding(R.id.checklist_item_root, indentPx + padH, padV, padH, padBottom)
+        } else {
+            views.setViewPadding(R.id.checklist_item_root, indentPx + (4 * density).toInt(), (6 * density).toInt(), (4 * density).toInt(), (6 * density).toInt())
+        }
 
         // Set checkbox: circle bg tinted to accent/secondary, white checkmark overlay
         if (item.isChecked) {
@@ -231,7 +266,7 @@ class ChecklistRemoteViewsFactory(
 
         // Apply dynamic card color tint on API 31+
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
-            val cardColor = if (isDark) 0xFF3C3C3C.toInt() else 0xFFFFFFFF.toInt()
+            val cardColor = if (isDark) 0xFF2D2D2D.toInt() else 0xFFFFFFFF.toInt()
             views.setColorStateList(rootId, "setBackgroundTintList",
                 android.content.res.ColorStateList.valueOf(cardColor))
         }

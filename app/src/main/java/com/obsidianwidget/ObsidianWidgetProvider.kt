@@ -340,19 +340,20 @@ class ObsidianWidgetProvider : AppWidgetProvider() {
                     ColorStateList.valueOf(0x00000000))
                 views.setViewPadding(R.id.widget_note_card, 0, 0, 0, 0)
             } else {
-                val cardColor = if (isDark) 0xFF3C3C3C.toInt() else 0xFFFFFFFF.toInt()
+                val cardColor = if (isDark) 0xFF2D2D2D.toInt() else 0xFFFFFFFF.toInt()
                 views.setInt(R.id.widget_note_card, "setBackgroundResource",
                     if (isDark) R.drawable.keep_note_card_dark else R.drawable.keep_note_card_light)
                 views.setColorStateList(R.id.widget_note_card, "setBackgroundTintList",
                     ColorStateList.valueOf(cardColor))
                 val density = context.resources.displayMetrics.density
-                val pad = (12 * density).toInt()
-                views.setViewPadding(R.id.widget_note_card, pad, pad, pad, pad)
+                val padH = (14 * density).toInt()
+                val padV = (16 * density).toInt()
+                views.setViewPadding(R.id.widget_note_card, padH, padV, padH, padV)
             }
 
-            // FAB with different dynamic accent color (darker on dark mode)
+            // FAB with different dynamic accent color (lighter on dark mode)
             val fabColorRes = if (isDark)
-                android.R.color.system_accent1_700
+                android.R.color.system_accent1_500
             else
                 android.R.color.system_accent1_200
             val fabColor = context.getColor(fabColorRes)
@@ -373,8 +374,9 @@ class ObsidianWidgetProvider : AppWidgetProvider() {
                 views.setInt(R.id.widget_note_card, "setBackgroundResource",
                     if (isDark) R.drawable.keep_note_card_dark else R.drawable.keep_note_card_light)
                 val density = context.resources.displayMetrics.density
-                val pad = (12 * density).toInt()
-                views.setViewPadding(R.id.widget_note_card, pad, pad, pad, pad)
+                val padH = (14 * density).toInt()
+                val padV = (16 * density).toInt()
+                views.setViewPadding(R.id.widget_note_card, padH, padV, padH, padV)
             }
             // FAB icon (slightly less opaque)
             val fabIconColor = if (isDark) 0xCCE6E1E5.toInt() else 0xCC1C1B1F.toInt()
