@@ -175,7 +175,7 @@ class ObsidianWidgetProvider : AppWidgetProvider() {
             views.setViewVisibility(R.id.widget_checklist, View.GONE)
             views.setViewVisibility(R.id.widget_note_preview, View.VISIBLE)
 
-            if (vaultManager.isVaultConfigured || vaultManager.noteMode == VaultManager.NoteMode.PINNED || vaultManager.noteMode == VaultManager.NoteMode.FOLDER) {
+            if (vaultManager.isVaultConfigured || vaultManager.noteMode == VaultManager.NoteMode.PINNED) {
                 val noteContent = vaultManager.readWidgetNote()
                 val preview = noteContent?.take(500) ?: context.getString(R.string.no_daily_note)
                 views.setTextViewText(R.id.widget_note_preview, preview)

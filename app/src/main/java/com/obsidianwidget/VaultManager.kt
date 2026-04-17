@@ -361,7 +361,7 @@ class VaultManager(private val context: Context, private val widgetId: Int = -1)
         val parts = mutableListOf<String>()
         for (file in files) {
             val name = file.name?.removeSuffix(".md") ?: "Note"
-            val content = readFileContent(file.uri) ?: continue
+            val content = readFileContent(file.uri)?.trimEnd() ?: continue
             parts.add("## $name\n$content")
         }
         return if (parts.isNotEmpty()) parts.joinToString("\n") else null
@@ -560,7 +560,7 @@ class VaultManager(private val context: Context, private val widgetId: Int = -1)
 
         var offset = 0
         for (file in files) {
-            val content = readFileContent(file.uri) ?: continue
+            val content = readFileContent(file.uri)?.trimEnd() ?: continue
             val fileLines = content.lines()
             // +1 for the heading line ("## FileName")
             val headingLines = 1
