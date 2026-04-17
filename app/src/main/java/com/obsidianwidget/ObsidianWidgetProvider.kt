@@ -334,7 +334,7 @@ class ObsidianWidgetProvider : AppWidgetProvider() {
                 ColorStateList.valueOf(fabColor))
 
             // FAB icon color
-            val fabIconColor = if (isDark) 0xFF1C1B1F.toInt() else 0xFF1C1B1F.toInt()
+            val fabIconColor = if (isDark) 0xFFE6E1E5.toInt() else 0xFF1C1B1F.toInt()
             views.setInt(R.id.widget_fab, "setColorFilter", fabIconColor)
         } else {
             // Fallback for pre-S devices
