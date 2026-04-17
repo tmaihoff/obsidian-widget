@@ -468,8 +468,8 @@ class VaultManager(private val context: Context, private val widgetId: Int = -1)
             val name = file.name?.removeSuffix(".md") ?: "Note"
             val content = readFileContent(file.uri)?.trimEnd() ?: continue
             val notePath = if (fp.isNotBlank()) "$fp/$name" else name
-            val filePathWithExt = if (fp.isNotBlank()) "$fp/${file.name}" else (file.name ?: "")
-            val bookmarkSuffix = if (filePathWithExt in bookmarkedPaths) BOOKMARK_MARKER else ""
+            val relativeFilePath = if (fp.isNotBlank()) "$fp/${file.name}" else (file.name ?: "")
+            val bookmarkSuffix = if (relativeFilePath in bookmarkedPaths) BOOKMARK_MARKER else ""
             parts.add("## $name${NOTE_PATH_SEPARATOR}$notePath$bookmarkSuffix\n$content")
         }
         return if (parts.isNotEmpty()) parts.joinToString("\n") else null
