@@ -23,6 +23,8 @@ class ObsidianWidgetProvider : AppWidgetProvider() {
         private const val ACTION_ADD = "com.obsidianwidget.ACTION_ADD"
         private const val ACTION_NAV_LEFT = "com.obsidianwidget.ACTION_NAV_LEFT"
         private const val ACTION_NAV_RIGHT = "com.obsidianwidget.ACTION_NAV_RIGHT"
+        private const val ACTION_OPEN_DAILY = "com.obsidianwidget.ACTION_OPEN_DAILY"
+        private const val ACTION_NEW_NOTE = "com.obsidianwidget.ACTION_NEW_NOTE"
         const val EXTRA_LINE_INDEX = "extra_line_index"
         const val EXTRA_APPEND_TO_WIDGET = "extra_append_to_widget"
         const val EXTRA_WIDGET_ID = "extra_widget_id"
@@ -113,6 +115,13 @@ class ObsidianWidgetProvider : AppWidgetProvider() {
                     val appWidgetManager = AppWidgetManager.getInstance(context)
                     updateWidget(context, appWidgetManager, widgetId)
                 }
+            }
+            ACTION_OPEN_DAILY -> {
+                openDailyNote(context)
+            }
+            ACTION_NEW_NOTE -> {
+                val widgetId = intent.getIntExtra(EXTRA_WIDGET_ID, -1)
+                openNewNote(context, widgetId)
             }
         }
     }
@@ -306,10 +315,16 @@ class ObsidianWidgetProvider : AppWidgetProvider() {
     ) {
         val isDark = vaultManager.resolveTheme() == "dark"
 
-        // FAB click = add to note
+        // FAB click = create new note in Obsidian
         views.setOnClickPendingIntent(
             R.id.widget_fab,
-            createActionIntent(context, ACTION_ADD, appWidgetId)
+            createActionIntent(context, ACTION_NEW_NOTE, appWidgetId)
+        )
+
+        // Daily note button
+        views.setOnClickPendingIntent(
+            R.id.widget_daily_btn,
+            createActionIntent(context, ACTION_OPEN_DAILY, appWidgetId)
         )
 
         // Show/hide header based on setting
@@ -365,6 +380,12 @@ class ObsidianWidgetProvider : AppWidgetProvider() {
             // FAB icon color (slightly less opaque)
             val fabIconColor = if (isDark) 0xCCE6E1E5.toInt() else 0xCC1C1B1F.toInt()
             views.setInt(R.id.widget_fab, "setColorFilter", fabIconColor)
+
+            // Daily note button - use widget background tint
+            views.setColorStateList(R.id.widget_daily_btn, "setBackgroundTintList",
+                ColorStateList.valueOf(bgColor))
+            val dailyIconColor = if (isDark) 0xFFCAC4D0.toInt() else 0xFF49454F.toInt()
+            views.setInt(R.id.widget_daily_btn, "setColorFilter", dailyIconColor)
         } else {
             // Fallback for pre-S devices
             views.setInt(R.id.widget_root, "setBackgroundResource",
@@ -383,6 +404,13 @@ class ObsidianWidgetProvider : AppWidgetProvider() {
             // FAB icon (slightly less opaque)
             val fabIconColor = if (isDark) 0xCCE6E1E5.toInt() else 0xCC1C1B1F.toInt()
             views.setInt(R.id.widget_fab, "setColorFilter", fabIconColor)
+
+            // Daily note button
+            val dailyBgColor = if (isDark) 0xFF1C1B1F.toInt() else 0xFFE8DEF8.toInt()
+            views.setColorStateList(R.id.widget_daily_btn, "setBackgroundTintList",
+                ColorStateList.valueOf(dailyBgColor))
+            val dailyIconColor = if (isDark) 0xFFCAC4D0.toInt() else 0xFF49454F.toInt()
+            views.setInt(R.id.widget_daily_btn, "setColorFilter", dailyIconColor)
         }
 
         // Text colors
@@ -497,6 +525,66 @@ class ObsidianWidgetProvider : AppWidgetProvider() {
                 ?: fallbackName
         } catch (_: Exception) {
             fallbackName
+        }
+    }
+
+    /**
+     * Open today's daily note in Obsidian using the obsidian://daily URI.
+     */
+    private fun openDailyNote(context: Context) {
+        try {
+            val dailyUri = Uri.parse("obsidian://daily")
+            val deepLinkIntent = Intent(Intent.ACTION_VIEW, dailyUri).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or
+                        Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                        Intent.FLAG_ACTIVITY_SINGLE_TOP
+            }
+            context.startActivity(deepLinkIntent)
+        } catch (_: Exception) {
+            // Obsidian not installed, try launching directly
+            try {
+                val obsidianIntent = context.packageManager
+                    .getLaunchIntentForPackage("md.obsidian")
+                if (obsidianIntent != null) {
+                    obsidianIntent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                    context.startActivity(obsidianIntent)
+                }
+            } catch (_: Exception) { }
+        }
+    }
+
+    /**
+     * Open Obsidian with a new note using the obsidian://new URI.
+     */
+    private fun openNewNote(context: Context, widgetId: Int) {
+        try {
+            val vaultManager = VaultManager(context, widgetId)
+            val vaultName = vaultManager.vaultName
+
+            val uriBuilder = Uri.Builder()
+                .scheme("obsidian")
+                .authority("new")
+            if (vaultName != null) {
+                uriBuilder.appendQueryParameter("vault", vaultName)
+            }
+            val newNoteUri = uriBuilder.build()
+
+            val deepLinkIntent = Intent(Intent.ACTION_VIEW, newNoteUri).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or
+                        Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                        Intent.FLAG_ACTIVITY_SINGLE_TOP
+            }
+            context.startActivity(deepLinkIntent)
+        } catch (_: Exception) {
+            // Obsidian not installed, try launching directly
+            try {
+                val obsidianIntent = context.packageManager
+                    .getLaunchIntentForPackage("md.obsidian")
+                if (obsidianIntent != null) {
+                    obsidianIntent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                    context.startActivity(obsidianIntent)
+                }
+            } catch (_: Exception) { }
         }
     }
 }

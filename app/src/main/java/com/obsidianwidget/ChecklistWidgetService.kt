@@ -85,22 +85,24 @@ class ChecklistRemoteViewsFactory(
         isDark = vaultManager.resolveTheme() == "dark"
         vaultName = vaultManager.vaultName
 
-        // Hide checked items and add a summary at the bottom
+        // Hide checked items and add per-note summaries
         val checkedCount = allItems.count { !it.isPlainText && it.isChecked }
         val filtered = allItems.filter { it.isPlainText || !it.isChecked }
 
         val displayItems = if (isKeepFolder && checkedCount > 0) {
-            recalculateFolderBoundaries(filtered)
+            // Count checked items per note and insert per-note summaries
+            val perNoteFiltered = insertPerNoteSummaries(allItems, filtered)
+            recalculateFolderBoundaries(perNoteFiltered)
         } else {
-            filtered
-        }.toMutableList()
-
-        if (checkedCount > 0) {
-            val label = if (checkedCount == 1) "item" else "items"
-            displayItems.add(VaultManager.ChecklistItem(
-                lineIndex = -1, text = "+ $checkedCount checked $label",
-                isChecked = false, isPlainText = true, isCheckedSummary = true
-            ))
+            val list = filtered.toMutableList()
+            if (checkedCount > 0) {
+                val label = if (checkedCount == 1) "item" else "items"
+                list.add(VaultManager.ChecklistItem(
+                    lineIndex = -1, text = "+ $checkedCount checked $label",
+                    isChecked = false, isPlainText = true, isCheckedSummary = true
+                ))
+            }
+            list
         }
 
         items = displayItems
@@ -320,6 +322,67 @@ class ChecklistRemoteViewsFactory(
             }
             result.add(item)
         }
+        return result
+    }
+
+    /**
+     * Insert per-note "+X checked items" summaries at the end of each note group.
+     * Groups items by heading boundaries and counts how many checked items were
+     * filtered out from each note.
+     */
+    private fun insertPerNoteSummaries(
+        allItems: List<VaultManager.ChecklistItem>,
+        filtered: List<VaultManager.ChecklistItem>
+    ): List<VaultManager.ChecklistItem> {
+        // Count checked items per note (heading group) in the original list
+        val headingIndices = allItems.indices.filter { allItems[it].isHeading }
+        if (headingIndices.isEmpty()) return filtered
+
+        // Map each heading's lineIndex to its checked count
+        val checkedPerNote = mutableMapOf<Int, Int>()
+        for (i in headingIndices.indices) {
+            val startIdx = headingIndices[i]
+            val endIdx = if (i + 1 < headingIndices.size) headingIndices[i + 1] else allItems.size
+            val headingLineIndex = allItems[startIdx].lineIndex
+            val noteChecked = (startIdx until endIdx).count {
+                !allItems[it].isPlainText && allItems[it].isChecked
+            }
+            if (noteChecked > 0) {
+                checkedPerNote[headingLineIndex] = noteChecked
+            }
+        }
+
+        // Insert summaries into the filtered list at the end of each note group
+        val result = mutableListOf<VaultManager.ChecklistItem>()
+        val filteredHeadingIndices = filtered.indices.filter { filtered[it].isHeading }
+
+        for (i in filteredHeadingIndices.indices) {
+            val startIdx = filteredHeadingIndices[i]
+            val endIdx = if (i + 1 < filteredHeadingIndices.size) filteredHeadingIndices[i + 1] else filtered.size
+            val headingLineIndex = filtered[startIdx].lineIndex
+            val checkedCount = checkedPerNote[headingLineIndex] ?: 0
+
+            // Add all items of this note
+            for (j in startIdx until endIdx) {
+                if (!filtered[j].isSpacer) result.add(filtered[j])
+            }
+
+            // Add per-note summary if there were checked items
+            if (checkedCount > 0) {
+                val label = if (checkedCount == 1) "item" else "items"
+                result.add(VaultManager.ChecklistItem(
+                    lineIndex = -1, text = "+ $checkedCount checked $label",
+                    isChecked = false, isPlainText = true, isCheckedSummary = true
+                ))
+            }
+        }
+
+        // Add any items before the first heading (shouldn't happen in folder mode, but safe)
+        if (filteredHeadingIndices.isNotEmpty() && filteredHeadingIndices[0] > 0) {
+            val prefix = filtered.subList(0, filteredHeadingIndices[0]).filter { !it.isSpacer }
+            return prefix + result
+        }
+
         return result
     }
 
