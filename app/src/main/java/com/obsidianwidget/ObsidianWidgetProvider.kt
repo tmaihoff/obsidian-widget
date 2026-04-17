@@ -29,6 +29,7 @@ class ObsidianWidgetProvider : AppWidgetProvider() {
         const val EXTRA_APPEND_TO_WIDGET = "extra_append_to_widget"
         const val EXTRA_WIDGET_ID = "extra_widget_id"
         const val EXTRA_URL = "extra_url"
+        const val EXTRA_OPEN_NOTE = "extra_open_note"
 
         fun updateAllWidgets(context: Context) {
             val intent = Intent(context, ObsidianWidgetProvider::class.java).apply {
@@ -96,6 +97,14 @@ class ObsidianWidgetProvider : AppWidgetProvider() {
                         }
                         context.startActivity(browseIntent)
                     } catch (_: Exception) { }
+                    return
+                }
+                val openNote = intent.getBooleanExtra(EXTRA_OPEN_NOTE, false)
+                if (openNote) {
+                    val widgetId2 = intent.getIntExtra(EXTRA_WIDGET_ID, -1)
+                    if (widgetId2 >= 0) {
+                        openObsidian(context, widgetId2)
+                    }
                     return
                 }
                 val lineIndex = intent.getIntExtra(EXTRA_LINE_INDEX, -1)
@@ -571,8 +580,7 @@ class ObsidianWidgetProvider : AppWidgetProvider() {
 
             val deepLinkIntent = Intent(Intent.ACTION_VIEW, newNoteUri).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or
-                        Intent.FLAG_ACTIVITY_CLEAR_TOP or
-                        Intent.FLAG_ACTIVITY_SINGLE_TOP
+                        Intent.FLAG_ACTIVITY_CLEAR_TASK
             }
             context.startActivity(deepLinkIntent)
         } catch (_: Exception) {

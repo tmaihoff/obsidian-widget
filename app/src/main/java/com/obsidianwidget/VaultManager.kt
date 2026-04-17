@@ -400,6 +400,25 @@ class VaultManager(private val context: Context, private val widgetId: Int = -1)
     }
 
     /**
+     * Get the sorted folder note files, with bookmarked files optionally sorted to top.
+     * This ordering must be used consistently wherever global line indices are assigned or resolved.
+     */
+    fun getSortedFolderNoteFiles(): List<DocumentFile> {
+        val files = getFolderNoteFiles()
+        if (!sortBookmarkedToTop) return files
+
+        val bookmarkedPaths = getBookmarkedPaths()
+        if (bookmarkedPaths.isEmpty()) return files
+
+        val fp = folderPath
+        return files.sortedWith(compareByDescending<DocumentFile> { file ->
+            val name = file.name ?: ""
+            val filePath = if (fp.isNotBlank()) "$fp/$name" else name
+            filePath in bookmarkedPaths
+        }.thenBy { it.name?.lowercase() })
+    }
+
+    /**
      * Read the set of bookmarked file paths from .obsidian/bookmarks.json.
      * Returns paths relative to the vault root (e.g. "folder/Note.md").
      */
@@ -446,22 +465,10 @@ class VaultManager(private val context: Context, private val widgetId: Int = -1)
      * Bookmarked notes are marked with an additional \u0001 at the end.
      */
     fun readFolderNotes(): String? {
-        val files = getFolderNoteFiles()
-        if (files.isEmpty()) return null
+        val sortedFiles = getSortedFolderNoteFiles()
+        if (sortedFiles.isEmpty()) return null
 
         val bookmarkedPaths = getBookmarkedPaths()
-
-        // Sort bookmarked files to top if enabled
-        val sortedFiles = if (sortBookmarkedToTop && bookmarkedPaths.isNotEmpty()) {
-            val fp = folderPath
-            files.sortedWith(compareByDescending<DocumentFile> { file ->
-                val name = file.name ?: ""
-                val filePath = if (fp.isNotBlank()) "$fp/$name" else name
-                filePath in bookmarkedPaths
-            }.thenBy { it.name?.lowercase() })
-        } else {
-            files
-        }
 
         val parts = mutableListOf<String>()
         val fp = folderPath
@@ -601,6 +608,7 @@ class VaultManager(private val context: Context, private val widgetId: Int = -1)
         val content = readWidgetNote() ?: return emptyList()
         val items = mutableListOf<ChecklistItem>()
         val isFolder = noteMode == NoteMode.FOLDER
+        var currentNotePath: String? = null
         content.lines().forEachIndexed { index, line ->
             val match = CHECKLIST_REGEX.matchEntire(line)
             val headingMatch = HEADING_REGEX.matchEntire(line)
@@ -609,7 +617,7 @@ class VaultManager(private val context: Context, private val widgetId: Int = -1)
                 val indentLevel = indent.count { it == ' ' } / 2 + indent.count { it == '\t' }
                 val checked = match.groupValues[2].lowercase() == "x"
                 val text = match.groupValues[3].trim()
-                items.add(ChecklistItem(lineIndex = index, text = text, isChecked = checked, indentLevel = indentLevel))
+                items.add(ChecklistItem(lineIndex = index, text = text, isChecked = checked, indentLevel = indentLevel, notePath = currentNotePath))
             } else if (headingMatch != null) {
                 val rawText = headingMatch.groupValues[2].trim()
                 // Extract note path and bookmark marker from metadata
@@ -618,6 +626,7 @@ class VaultManager(private val context: Context, private val widgetId: Int = -1)
                 val metaPart = if (parts.size > 1) parts[1] else null
                 val isBookmarked = metaPart?.endsWith(BOOKMARK_MARKER) == true
                 val notePath = metaPart?.removeSuffix(BOOKMARK_MARKER)
+                currentNotePath = notePath
                 items.add(ChecklistItem(lineIndex = index, text = text, isChecked = false, isPlainText = true, isHeading = true, notePath = notePath, isBookmarked = isBookmarked))
             } else {
                 val bulletMatch = BULLET_REGEX.matchEntire(line)
@@ -625,9 +634,9 @@ class VaultManager(private val context: Context, private val widgetId: Int = -1)
                     val indent = bulletMatch.groupValues[1]
                     val indentLevel = indent.count { it == ' ' } / 2 + indent.count { it == '\t' }
                     val text = bulletMatch.groupValues[2].trim()
-                    items.add(ChecklistItem(lineIndex = index, text = text, isChecked = false, isPlainText = true, isBullet = true, indentLevel = indentLevel))
+                    items.add(ChecklistItem(lineIndex = index, text = text, isChecked = false, isPlainText = true, isBullet = true, indentLevel = indentLevel, notePath = currentNotePath))
                 } else if (line.isNotBlank()) {
-                    items.add(ChecklistItem(lineIndex = index, text = line.trim(), isChecked = false, isPlainText = true))
+                    items.add(ChecklistItem(lineIndex = index, text = line.trim(), isChecked = false, isPlainText = true, notePath = currentNotePath))
                 }
             }
         }
@@ -701,7 +710,7 @@ class VaultManager(private val context: Context, private val widgetId: Int = -1)
      * back to the correct file and local line index.
      */
     private fun toggleFolderChecklistItem(globalLineIndex: Int): Boolean {
-        val files = getFolderNoteFiles()
+        val files = getSortedFolderNoteFiles()
         if (files.isEmpty()) return false
 
         var offset = 0

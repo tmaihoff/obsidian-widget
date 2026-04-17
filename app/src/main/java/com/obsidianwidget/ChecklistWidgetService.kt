@@ -198,6 +198,20 @@ class ChecklistRemoteViewsFactory(
                 views.setOnClickFillInIntent(R.id.text_item_root, Intent().apply {
                     putExtra(ObsidianWidgetProvider.EXTRA_URL, url)
                 })
+            } else if (tapCheckboxOnly && item.notePath != null && vaultName != null) {
+                val obsidianUri = android.net.Uri.Builder()
+                    .scheme("obsidian")
+                    .authority("open")
+                    .appendQueryParameter("vault", vaultName)
+                    .appendQueryParameter("file", item.notePath)
+                    .build()
+                views.setOnClickFillInIntent(R.id.text_item_root, Intent().apply {
+                    putExtra(ObsidianWidgetProvider.EXTRA_URL, obsidianUri.toString())
+                })
+            } else if (tapCheckboxOnly) {
+                views.setOnClickFillInIntent(R.id.text_item_root, Intent().apply {
+                    putExtra(ObsidianWidgetProvider.EXTRA_OPEN_NOTE, true)
+                })
             } else {
                 views.setOnClickFillInIntent(R.id.text_item_root, Intent())
             }
@@ -257,8 +271,20 @@ class ChecklistRemoteViewsFactory(
                 views.setOnClickFillInIntent(R.id.checklist_item_root, Intent().apply {
                     putExtra(ObsidianWidgetProvider.EXTRA_URL, url)
                 })
+            } else if (item.notePath != null && vaultName != null) {
+                val obsidianUri = android.net.Uri.Builder()
+                    .scheme("obsidian")
+                    .authority("open")
+                    .appendQueryParameter("vault", vaultName)
+                    .appendQueryParameter("file", item.notePath)
+                    .build()
+                views.setOnClickFillInIntent(R.id.checklist_item_root, Intent().apply {
+                    putExtra(ObsidianWidgetProvider.EXTRA_URL, obsidianUri.toString())
+                })
             } else {
-                views.setOnClickFillInIntent(R.id.checklist_item_root, Intent())
+                views.setOnClickFillInIntent(R.id.checklist_item_root, Intent().apply {
+                    putExtra(ObsidianWidgetProvider.EXTRA_OPEN_NOTE, true)
+                })
             }
         } else {
             views.setOnClickFillInIntent(R.id.checklist_item_root, fillIntent)
