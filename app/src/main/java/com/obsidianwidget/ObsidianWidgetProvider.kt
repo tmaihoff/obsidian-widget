@@ -560,18 +560,12 @@ class ObsidianWidgetProvider : AppWidgetProvider() {
 
     /**
      * Open Obsidian with a new note using the obsidian://new URI.
+     * Dead-simple: just fire obsidian://new with no vault/folder params,
+     * matching exactly what happens when opening that URI in a browser.
      */
     private fun openNewNote(context: Context, widgetId: Int) {
         try {
-            val vaultManager = VaultManager(context, widgetId)
-            val vaultName = vaultManager.vaultName
-
-            val newNoteUriString = if (vaultName != null) {
-                "obsidian://new?vault=${Uri.encode(vaultName)}"
-            } else {
-                "obsidian://new"
-            }
-            val newNoteUri = Uri.parse(newNoteUriString)
+            val newNoteUri = Uri.parse("obsidian://new")
             val deepLinkIntent = Intent(Intent.ACTION_VIEW, newNoteUri).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or
                         Intent.FLAG_ACTIVITY_CLEAR_TOP or
@@ -589,5 +583,14 @@ class ObsidianWidgetProvider : AppWidgetProvider() {
                 }
             } catch (_: Exception) { }
         }
+        // Previous implementation that constructed URI with vault name:
+        // val vaultManager = VaultManager(context, widgetId)
+        // val vaultName = vaultManager.vaultName
+        // val newNoteUriString = if (vaultName != null) {
+        //     "obsidian://new?vault=${Uri.encode(vaultName)}"
+        // } else {
+        //     "obsidian://new"
+        // }
+        // val newNoteUri = Uri.parse(newNoteUriString)
     }
 }
